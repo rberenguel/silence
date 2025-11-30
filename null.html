@@ -23,7 +23,7 @@
 </div>
 <div id="level-indicator">HARMONICS: <span id="complexity-disp">1</span></div>
 <canvas id="scope"></canvas>
-<div id="controls-hint">DRAG: Align Phase | TAP: MERGE</div>
+<div id="controls-hint">DRAG: Align Phase | TAP TOP: Drop | TAP BOTTOM: Flip</div>
 
 <script>
 window.addEventListener('load', function() {
@@ -213,20 +213,28 @@ window.addEventListener('load', function() {
         let rmsAfter = Math.sqrt(sumSqAfter / POINTS);
 
         const trendEl = document.getElementById('rms-trend');
-        if (rmsAfter > rmsBefore + 0.05) {
+        if (rmsAfter > rmsBefore) {
             trendEl.className = 'rms-indicator iconoir-graph-up';
             trendEl.style.color = '#ff0000';
             rmsTrendTimer = 180; // Show for ~3 seconds at 60fps
-        } else if (rmsAfter < rmsBefore - 0.05) {
+        } else if (rmsAfter < rmsBefore) {
             trendEl.className = 'rms-indicator iconoir-graph-down';
             trendEl.style.color = '#00ff00';
             rmsTrendTimer = 180; // Show for ~3 seconds at 60fps
         }
         lastRMS = rmsAfter;
 
-        // Progression
+        // Progression - complexity based on RMS reduction
         score++;
-        if (score % 3 === 0) complexity++; // Increase difficulty every 3 drops
+
+        // Increase complexity as player reduces RMS
+        // Start at ~2.5 RMS, complexity 1
+        // Every time RMS drops below certain thresholds, increase complexity
+        if (rmsAfter < 2.0 && complexity === 1) complexity = 2;
+        else if (rmsAfter < 1.5 && complexity === 2) complexity = 3;
+        else if (rmsAfter < 1.0 && complexity === 3) complexity = 4;
+        else if (rmsAfter < 0.7 && complexity === 4) complexity = 5;
+        else if (rmsAfter < 0.5 && complexity === 5) complexity = 6;
 
         spawnPacket();
     }
@@ -325,11 +333,13 @@ window.addEventListener('load', function() {
 
     // --- INPUT ---
     let startX = 0;
+    let startY = 0;
     let isDragging = false;
     let isMouseDown = false;
 
-    function inputStart(x) {
+    function inputStart(x, y) {
         startX = x;
+        startY = y;
         isDragging = false;
         isMouseDown = true;
     }
@@ -357,21 +367,24 @@ window.addEventListener('load', function() {
     function inputEnd() {
         if (!gameRunning) { resetGame(); return; }
 
-        // If we didn't drag (Tap), or user lifted finger after positioning
-        // User asked: "Tap to merge".
-        // To allow precise positioning without dropping, we distinguish tap vs drag release?
-        // Actually, if drag ends, we just wait.
-        // User explicitly said "Tap to merge". That implies a discrete action separate from dragging.
-
+        // If we didn't drag (Tap), determine action based on Y position
         if (!isDragging) {
-            if (!isDropping) isDropping = true;
+            if (startY > HEIGHT / 2) {
+                // Lower half: Flip the wavelet
+                for (let i = 0; i < packet.vals.length; i++) {
+                    packet.vals[i] *= -1;
+                }
+            } else {
+                // Upper half: Drop the wavelet
+                if (!isDropping) isDropping = true;
+            }
         }
         isDragging = false;
         isMouseDown = false;
     }
 
-    canvas.addEventListener('mousedown', e => inputStart(e.clientX));
-    canvas.addEventListener('touchstart', e => inputStart(e.touches[0].clientX), {passive: false});
+    canvas.addEventListener('mousedown', e => inputStart(e.clientX, e.clientY));
+    canvas.addEventListener('touchstart', e => inputStart(e.touches[0].clientX, e.touches[0].clientY), {passive: false});
 
     canvas.addEventListener('mousemove', e => inputMove(e.clientX));
     canvas.addEventListener('touchmove', e => { e.preventDefault(); inputMove(e.touches[0].clientX); }, {passive: false});
