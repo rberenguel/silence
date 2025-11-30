@@ -41,6 +41,15 @@ window.addEventListener("load", function () {
   let piecesRemaining = 120;
   let bestRMS = Infinity;
 
+  // Track complexity threshold crossings for rewarding inverts
+  let complexityThresholdsReached = {
+    2.0: false,
+    1.5: false,
+    1.0: false,
+    0.7: false,
+    0.5: false,
+  };
+
   // High scores - stored as array of {rms: number, date: timestamp}
   let highScores = [];
 
@@ -148,6 +157,10 @@ window.addEventListener("load", function () {
       if (harmonics > 1) {
         val += Math.sin(i * freq * 2.5) * 0.5;
       }
+
+      // Add high-frequency components to reduce Gibbs ringing
+      val += (Math.random() - 0.5) * 0.25; // Random texture
+      val += Math.sin(i * 1.8 + phase) * 0.2; // Deterministic high-freq
 
       // Scale amplitude (sometimes positive, sometimes negative average)
       // We want it to be distinct.
@@ -342,38 +355,56 @@ window.addEventListener("load", function () {
     // Progression - complexity based on RMS reduction (both modes)
     score++;
 
+    // Check if crossing thresholds (both directions) for invert rewards
+    const thresholds = [2.0, 1.5, 1.0, 0.7, 0.5];
+    for (const threshold of thresholds) {
+      // Crossing downward (improvement)
+      if (rmsBefore >= threshold && rmsAfter < threshold) {
+        if (!complexityThresholdsReached[threshold]) {
+          complexityThresholdsReached[threshold] = true;
+          invertCount += 3;
+          updateInvertButton();
+        }
+      }
+      // Crossing back upward (returning to threshold after being below)
+      if (rmsBefore < threshold && rmsAfter >= threshold) {
+        // Give inverts if they had reached this threshold before
+        if (complexityThresholdsReached[threshold]) {
+          invertCount += 3;
+          updateInvertButton();
+        }
+      }
+    }
+
     // Increase complexity as player reduces RMS (same thresholds in both modes)
     if (rmsAfter < 2.0 && complexity === 1) {
       complexity = 2;
       document.getElementById("complexity-disp").innerText = complexity;
-      invertCount += 3;
-      updateInvertButton();
     } else if (rmsAfter < 1.5 && complexity === 2) {
       complexity = 3;
       document.getElementById("complexity-disp").innerText = complexity;
-      invertCount += 3;
-      updateInvertButton();
     } else if (rmsAfter < 1.0 && complexity === 3) {
       complexity = 4;
       document.getElementById("complexity-disp").innerText = complexity;
-      invertCount += 3;
-      updateInvertButton();
     } else if (rmsAfter < 0.7 && complexity === 4) {
       complexity = 5;
       document.getElementById("complexity-disp").innerText = complexity;
-      invertCount += 3;
-      updateInvertButton();
     } else if (rmsAfter < 0.5 && complexity === 5) {
       complexity = 6;
       document.getElementById("complexity-disp").innerText = complexity;
-      invertCount += 3;
-      updateInvertButton();
     }
 
     // Update pieces counter in piece-based mode
     if (gameMode === "piece-based") {
       piecesRemaining--;
       document.getElementById("pieces-remaining").innerText = piecesRemaining;
+
+      // Give extra inverts every 50 pieces in piece-based mode
+      const piecesUsed = 120 - piecesRemaining;
+      if (piecesUsed > 0 && piecesUsed % 50 === 0) {
+        invertCount += 3;
+        updateInvertButton();
+      }
     }
 
     spawnPacket();
@@ -445,6 +476,15 @@ window.addEventListener("load", function () {
     waveletQueue = [];
     bestRMS = Infinity;
     piecesRemaining = 120;
+
+    // Reset threshold tracking
+    complexityThresholdsReached = {
+      2.0: false,
+      1.5: false,
+      1.0: false,
+      0.7: false,
+      0.5: false,
+    };
 
     // Pre-fill queue with 3 wavelets
     for (let i = 0; i < 3; i++) {
