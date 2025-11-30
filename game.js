@@ -533,10 +533,11 @@ window.addEventListener("load", function () {
         const dir = pixelsMoved > 0 ? 1 : -1;
         packet.xIndex += dir * segmentsToMove;
 
-        // Bounds Check
-        if (packet.xIndex < 0) packet.xIndex = 0;
-        if (packet.xIndex + packet.vals.length > POINTS)
-          packet.xIndex = POINTS - packet.vals.length;
+        // Bounds Check - allow dragging until half the wavelet is off-screen
+        const halfWidth = Math.floor(packet.vals.length / 2);
+        if (packet.xIndex < -halfWidth) packet.xIndex = -halfWidth;
+        if (packet.xIndex + halfWidth > POINTS)
+          packet.xIndex = POINTS - halfWidth;
 
         startX = x;
       }
