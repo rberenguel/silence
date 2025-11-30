@@ -245,31 +245,39 @@ window.addEventListener("load", function () {
     }
     lastRMS = rmsAfter;
 
-    // Progression - complexity based on RMS reduction (only in endless mode)
+    // Progression - complexity based on RMS reduction (both modes)
     score++;
 
-    if (gameMode === "endless") {
-      // Increase complexity as player reduces RMS
-      // Start at ~2.5 RMS, complexity 1
-      // Every time RMS drops below certain thresholds, increase complexity
-      if (rmsAfter < 2.0 && complexity === 1) {
-        complexity = 2;
-        document.getElementById("complexity-disp").innerText = complexity;
-      } else if (rmsAfter < 1.5 && complexity === 2) {
-        complexity = 3;
-        document.getElementById("complexity-disp").innerText = complexity;
-      } else if (rmsAfter < 1.0 && complexity === 3) {
-        complexity = 4;
-        document.getElementById("complexity-disp").innerText = complexity;
-      } else if (rmsAfter < 0.7 && complexity === 4) {
-        complexity = 5;
-        document.getElementById("complexity-disp").innerText = complexity;
-      } else if (rmsAfter < 0.5 && complexity === 5) {
-        complexity = 6;
-        document.getElementById("complexity-disp").innerText = complexity;
-      }
-    } else if (gameMode === "piece-based") {
-      // Update pieces counter
+    // Increase complexity as player reduces RMS (same thresholds in both modes)
+    if (rmsAfter < 2.0 && complexity === 1) {
+      complexity = 2;
+      document.getElementById("complexity-disp").innerText = complexity;
+      invertCount += 3;
+      updateInvertButton();
+    } else if (rmsAfter < 1.5 && complexity === 2) {
+      complexity = 3;
+      document.getElementById("complexity-disp").innerText = complexity;
+      invertCount += 3;
+      updateInvertButton();
+    } else if (rmsAfter < 1.0 && complexity === 3) {
+      complexity = 4;
+      document.getElementById("complexity-disp").innerText = complexity;
+      invertCount += 3;
+      updateInvertButton();
+    } else if (rmsAfter < 0.7 && complexity === 4) {
+      complexity = 5;
+      document.getElementById("complexity-disp").innerText = complexity;
+      invertCount += 3;
+      updateInvertButton();
+    } else if (rmsAfter < 0.5 && complexity === 5) {
+      complexity = 6;
+      document.getElementById("complexity-disp").innerText = complexity;
+      invertCount += 3;
+      updateInvertButton();
+    }
+
+    // Update pieces counter in piece-based mode
+    if (gameMode === "piece-based") {
       piecesRemaining--;
       document.getElementById("pieces-remaining").innerText = piecesRemaining;
     }
