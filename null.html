@@ -25,6 +25,7 @@
     text-align: center;
     z-index: 100;
     box-shadow: 0 0 30px #33ff00;
+    cursor: pointer;
   }
   #splash-screen h1 {
     font-family: 'Sixtyfour', monospace;
@@ -592,6 +593,11 @@ window.addEventListener('load', function() {
         isDragging = false;
         isMouseDown = false;
     }
+
+    // Splash screen click handlers
+    const splashScreen = document.getElementById('splash-screen');
+    splashScreen.addEventListener('click', inputEnd);
+    splashScreen.addEventListener('touchend', inputEnd);
 
     canvas.addEventListener('mousedown', e => inputStart(e.clientX, e.clientY));
     canvas.addEventListener('touchstart', e => inputStart(e.touches[0].clientX, e.touches[0].clientY), {passive: false});
