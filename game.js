@@ -1,3 +1,5 @@
+import { get, set } from "./lib/idb-keyval.js";
+
 window.addEventListener("load", function () {
   const canvas = document.getElementById("scope");
   const ctx = canvas.getContext("2d");
@@ -28,6 +30,45 @@ window.addEventListener("load", function () {
   let gameMode = "endless"; // "endless" or "piece-based"
   let piecesRemaining = 120;
   let bestRMS = Infinity;
+
+  // High scores - stored as array of {rms: number, date: timestamp}
+  let highScores = [];
+
+  // Load high scores from IndexedDB
+  async function loadHighScores() {
+    const scores = await get("highScores");
+    highScores = scores || [];
+  }
+
+  // Save high scores to IndexedDB
+  async function saveHighScores() {
+    await set("highScores", highScores);
+  }
+
+  // Add a new score and keep only top 5
+  async function addHighScore(rms) {
+    highScores.push({ rms, date: Date.now() });
+    // Sort by RMS ascending (lower is better)
+    highScores.sort((a, b) => a.rms - b.rms);
+    // Keep only top 5
+    highScores = highScores.slice(0, 5);
+    await saveHighScores();
+  }
+
+  // Format high scores for display
+  function formatHighScores() {
+    if (highScores.length === 0) {
+      return "<p>No scores yet!</p>";
+    }
+    let html = "<ol>";
+    highScores.forEach((score) => {
+      const date = new Date(score.date);
+      const dateStr = date.toLocaleDateString();
+      html += `<li>${score.rms.toFixed(2)} <span class="score-date">(${dateStr})</span></li>`;
+    });
+    html += "</ol>";
+    return html;
+  }
 
   function resize() {
     const dpr = window.devicePixelRatio || 1;
@@ -295,8 +336,12 @@ window.addEventListener("load", function () {
     showGameMenu("OVERLOAD - SIGNAL CLIPPED", "red");
   }
 
-  function gamePieceEnd() {
+  async function gamePieceEnd() {
     gameRunning = false;
+
+    // Save the score
+    await addHighScore(bestRMS);
+
     showGameMenu(
       `GAME OVER - Best RMS: ${bestRMS.toFixed(2)}`,
       bestRMS < 0.5 ? "#00ff00" : "#ffcc00",
@@ -318,6 +363,16 @@ window.addEventListener("load", function () {
     }
     messageEl.innerText = message;
     messageEl.style.color = color;
+
+    // Show high scores if in piece-based mode
+    const highScoresSection = document.getElementById("high-scores-section");
+    const highScoresList = document.getElementById("high-scores-list");
+    if (gameMode === "piece-based") {
+      highScoresSection.style.display = "block";
+      highScoresList.innerHTML = formatHighScores();
+    } else {
+      highScoresSection.style.display = "none";
+    }
 
     menuEl.style.display = "block";
   }
@@ -648,6 +703,21 @@ window.addEventListener("load", function () {
     isMouseDown = false;
   }
 
+  // Update splash screen high scores display
+  function updateSplashHighScores() {
+    const splashHighScores = document.getElementById("splash-high-scores");
+    const splashHighScoresList = document.getElementById(
+      "splash-high-scores-list",
+    );
+
+    if (highScores.length > 0) {
+      splashHighScores.style.display = "block";
+      splashHighScoresList.innerHTML = formatHighScores();
+    } else {
+      splashHighScores.style.display = "none";
+    }
+  }
+
   // Start button handler
   const startBtn = document.getElementById("start-btn");
   startBtn.addEventListener("click", () => {
@@ -667,6 +737,7 @@ window.addEventListener("load", function () {
   const changeModeBtn = document.getElementById("change-mode-btn");
   changeModeBtn.addEventListener("click", () => {
     hideGameMenu();
+    updateSplashHighScores();
     document.getElementById("splash-screen").style.display = "block";
   });
 
@@ -758,11 +829,18 @@ window.addEventListener("load", function () {
   });
 
   // Boot
-  generateNoise();
-  // Pre-fill queue with 3 wavelets
-  for (let i = 0; i < 3; i++) {
-    waveletQueue.push(createProceduralPacket(complexity));
+  async function init() {
+    await loadHighScores();
+    updateSplashHighScores();
+
+    generateNoise();
+    // Pre-fill queue with 3 wavelets
+    for (let i = 0; i < 3; i++) {
+      waveletQueue.push(createProceduralPacket(complexity));
+    }
+    spawnPacket();
+    requestAnimationFrame(loop);
   }
-  spawnPacket();
-  requestAnimationFrame(loop);
+
+  init();
 });

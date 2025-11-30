@@ -1,4 +1,4 @@
-const CACHE_NAME = "silence-cache-v0.1.1";
+const CACHE_NAME = "silence-cache-v0.1.2";
 const CACHE_FILES = [
   "./favicon.ico",
   "./fonts/SixtyFour.woff2",
@@ -12,6 +12,7 @@ const CACHE_FILES = [
   "./game.js",
   "./icon.png",
   "./index.html",
+  "./lib/idb-keyval.js",
   "./manifest.json",
   "./style.css",
 ];

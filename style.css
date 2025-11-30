@@ -155,7 +155,6 @@ canvas {
   color: #88ff88;
   font-size: 14px;
   cursor: pointer;
-  padding: 8px;
   border: 1px solid transparent;
   transition: all 0.2s;
 }
@@ -262,6 +261,46 @@ canvas {
 #game-menu button:hover {
   background: rgba(0, 40, 0, 0.9);
   box-shadow: 0 0 15px rgba(51, 255, 0, 0.5);
+}
+
+#game-menu h3,
+#splash-high-scores h3 {
+  font-family: "monoidregular", monospace;
+  font-size: 24px;
+  color: #33ff00;
+  margin: 20px 0 10px 0;
+  text-shadow: 0 0 8px #33ff00;
+}
+
+#high-scores-section,
+#splash-high-scores {
+  margin: 20px 0;
+  padding: 15px;
+  border: 1px solid #33ff00;
+  background: rgba(0, 10, 0, 0.5);
+}
+
+#high-scores-list,
+#splash-high-scores-list {
+  color: #88ff88;
+  text-align: left;
+}
+
+#high-scores-list ol,
+#splash-high-scores-list ol {
+  padding-left: 30px;
+  margin: 10px 0;
+}
+
+#high-scores-list li,
+#splash-high-scores-list li {
+  margin: 8px 0;
+  font-size: 18px;
+}
+
+.score-date {
+  color: #00aa00;
+  font-size: 14px;
 }
 
 @media (max-width: 768px) {

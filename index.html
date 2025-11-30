@@ -40,12 +40,20 @@
           <span>PIECE-BASED - Best RMS in 120 pieces</span>
         </label>
       </div>
+      <div id="splash-high-scores" style="display: none;">
+        <h3>HIGH SCORES</h3>
+        <div id="splash-high-scores-list"></div>
+      </div>
       <button id="start-btn">START GAME</button>
     </div>
 
     <div id="game-menu" style="display: none;">
       <h2>MENU</h2>
       <p>Current Mode: <span id="current-mode-display">ENDLESS</span></p>
+      <div id="high-scores-section" style="display: none;">
+        <h3>HIGH SCORES</h3>
+        <div id="high-scores-list"></div>
+      </div>
       <button id="restart-btn">RESTART GAME</button>
       <button id="change-mode-btn">CHANGE MODE</button>
       <button id="resume-btn">RESUME</button>
@@ -67,7 +75,7 @@
     <div id="controls-hint">DRAG: Position | TAP: Drop</div>
     <button id="invert-btn">INVERT (<span id="invert-count">5</span>)</button>
 
-    <script src="game.js"></script>
+    <script type="module" src="game.js"></script>
     <script>
       // Register service worker for PWA offline support
       if ("serviceWorker" in navigator) {
