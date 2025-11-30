@@ -1,7 +1,7 @@
 body {
   background-color: #000000;
   color: #33ff00;
-  font-family: 'monoidregular', monospace;
+  font-family: "monoidregular", monospace;
   margin: 0;
   overflow: hidden;
   touch-action: none;
@@ -57,7 +57,7 @@ canvas {
   background: rgba(0, 20, 0, 0.8);
   border: 2px solid #33ff00;
   color: #33ff00;
-  font-family: 'monoidregular', monospace;
+  font-family: "monoidregular", monospace;
   font-size: 16px;
   padding: 12px 20px;
   cursor: pointer;
@@ -96,7 +96,7 @@ canvas {
 }
 
 #splash-screen h1 {
-  font-family: 'Sixtyfour', monospace;
+  font-family: "Sixtyfour", monospace;
   font-size: 72px;
   color: #33ff00;
   margin: 0 0 30px 0;
@@ -118,15 +118,37 @@ canvas {
 }
 
 @media (max-width: 768px) {
-  #splash-screen h1 {
-    font-size: 48px;
-    margin: 0 0 20px 0;
+  .hud-text {
+    font-size: 16px;
+    padding: 6px 12px;
   }
+
+  #controls-hint {
+    font-size: 10px;
+  }
+
+  #invert-btn {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+
+  #splash-screen {
+    width: 90vw;
+    box-sizing: border-box;
+  }
+
+  #splash-screen h1 {
+    font-size: calc(max(36px, 8vw));
+    margin: 0 0 15px 0;
+    word-break: keep-all;
+  }
+
   #splash-screen p {
     font-size: 14px;
     line-height: 1.6;
     margin: 10px 0;
   }
+
   #splash-screen .tap-hint {
     margin-top: 30px;
     font-size: 12px;
@@ -134,6 +156,11 @@ canvas {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }

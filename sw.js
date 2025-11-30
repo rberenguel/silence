@@ -1,19 +1,19 @@
 const CACHE_NAME = "silence-cache-v0.1.0";
 const CACHE_FILES = [
-  './favicon.ico',
-  './fonts/SixtyFour.woff2',
-  './fonts/Sixtyfour.woff2',
-  './fonts/iconoir/iconoir.css',
-  './fonts/monoid-bold.woff2',
-  './fonts/monoid-italic.woff2',
-  './fonts/monoid-regular.woff2',
-  './fonts/monoid.css',
-  './fonts/sixtyfour.css',
-  './game.js',
-  './icon.png',
-  './index.html',
-  './manifest.json',
-  './style.css',
+  "./favicon.ico",
+  "./fonts/SixtyFour.woff2",
+  "./fonts/Sixtyfour.woff2",
+  "./fonts/iconoir/iconoir.css",
+  "./fonts/monoid-bold.woff2",
+  "./fonts/monoid-italic.woff2",
+  "./fonts/monoid-regular.woff2",
+  "./fonts/monoid.css",
+  "./fonts/sixtyfour.css",
+  "./game.js",
+  "./icon.png",
+  "./index.html",
+  "./manifest.json",
+  "./style.css",
 ];
 
 // Install event: opens a cache and adds the core files to it.
