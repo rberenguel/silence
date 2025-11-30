@@ -11,17 +11,14 @@
   .hud-text { background: rgba(0, 20, 0, 0.8); padding: 8px 15px; border: 1px solid #33ff00; font-size: 20px; text-shadow: 0 0 5px #33ff00; }
   .rms-indicator { margin-left: 8px; display: inline-block; vertical-align: middle; }
   #controls-hint { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #00aa00; font-size: 12px; pointer-events: none; z-index: 30; }
-  /* Status overlay for "Complexity Level" */
-  #level-indicator { position: absolute; top: 50px; left: 10px; font-size: 10px; color: #008800; pointer-events: none; }
 </style>
 </head>
 <body>
 
 <div id="game-ui">
   <div class="hud-text">RMS: <span id="noise-lvl">0.00</span><i id="rms-trend" class="rms-indicator"></i></div>
-  <div class="hud-text" id="status">ACQUIRING</div>
+  <div class="hud-text">COMPLEXITY: <span id="complexity-disp">1</span></div>
 </div>
-<div id="level-indicator">HARMONICS: <span id="complexity-disp">1</span></div>
 <canvas id="scope"></canvas>
 <div id="controls-hint">DRAG: Align Phase | TAP TOP: Drop | TAP BOTTOM: Flip</div>
 
@@ -123,11 +120,8 @@ window.addEventListener('load', function() {
     function spawnPacket() {
         packet.vals = createProceduralPacket(complexity);
         packet.xIndex = Math.floor(POINTS/2) - Math.floor(packet.vals.length/2);
-        packet.yOffset = -HEIGHT * 0.4; 
+        packet.yOffset = -HEIGHT * 0.3;
         isDropping = false;
-        
-        // Visual indicator of current difficulty
-        document.getElementById('complexity-disp').innerText = complexity;
     }
 
     // --- ENGINE ---
@@ -230,33 +224,37 @@ window.addEventListener('load', function() {
         // Increase complexity as player reduces RMS
         // Start at ~2.5 RMS, complexity 1
         // Every time RMS drops below certain thresholds, increase complexity
-        if (rmsAfter < 2.0 && complexity === 1) complexity = 2;
-        else if (rmsAfter < 1.5 && complexity === 2) complexity = 3;
-        else if (rmsAfter < 1.0 && complexity === 3) complexity = 4;
-        else if (rmsAfter < 0.7 && complexity === 4) complexity = 5;
-        else if (rmsAfter < 0.5 && complexity === 5) complexity = 6;
+        if (rmsAfter < 2.0 && complexity === 1) {
+            complexity = 2;
+            document.getElementById('complexity-disp').innerText = complexity;
+        } else if (rmsAfter < 1.5 && complexity === 2) {
+            complexity = 3;
+            document.getElementById('complexity-disp').innerText = complexity;
+        } else if (rmsAfter < 1.0 && complexity === 3) {
+            complexity = 4;
+            document.getElementById('complexity-disp').innerText = complexity;
+        } else if (rmsAfter < 0.7 && complexity === 4) {
+            complexity = 5;
+            document.getElementById('complexity-disp').innerText = complexity;
+        } else if (rmsAfter < 0.5 && complexity === 5) {
+            complexity = 6;
+            document.getElementById('complexity-disp').innerText = complexity;
+        }
 
         spawnPacket();
     }
 
     function gameOver() {
         gameRunning = false;
-        const s = document.getElementById('status');
-        s.innerText = "SYSTEM OVERLOAD - TAP TO RESET";
-        s.style.borderColor = "red";
-        s.style.color = "red";
     }
 
     function resetGame() {
         generateNoise();
         complexity = 1;
+        document.getElementById('complexity-disp').innerText = complexity;
         score = 0;
         spawnPacket();
         gameRunning = true;
-        const s = document.getElementById('status');
-        s.innerText = "ACQUIRING";
-        s.style.borderColor = "#33ff00";
-        s.style.color = "#33ff00";
     }
 
     function spawnParticle(x, y, color) {
@@ -350,8 +348,8 @@ window.addEventListener('load', function() {
         if (Math.abs(diff) > 5) isDragging = true; // Small deadzone
 
         if (isDragging && !isDropping) {
-            // Sensitivity
-            if (Math.abs(diff) > SEGMENT_WIDTH * 0.8) {
+            // Sensitivity - faster movement
+            if (Math.abs(diff) > SEGMENT_WIDTH * 0.3) {
                 const dir = diff > 0 ? 1 : -1;
                 packet.xIndex += dir;
 
