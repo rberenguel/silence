@@ -1,4 +1,4 @@
-const CACHE_NAME = "silence-cache-v0.1.4";
+const CACHE_NAME = "silence-cache-v0.1.5";
 const CACHE_FILES = [
   "./favicon.ico",
   "./fonts/SixtyFour.woff2",

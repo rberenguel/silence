@@ -16,6 +16,7 @@ window.addEventListener("load", function () {
   let isDropping = false;
   let gameRunning = false; // Start with game paused for splash
   let gameStarted = false;
+  let isInverted = false; // Track if current wavelet is inverted
 
   // Animation state for signal merging
   let mergeAnimation = {
@@ -133,10 +134,14 @@ window.addEventListener("load", function () {
     }
   }
 
-  function createProceduralPacket(lvl) {
+  function createProceduralPacket(maxLvl) {
     // "The more there are the harder it is"
     // Lvl 1: Width ~10, 1-2 peaks.
     // Lvl 5: Width ~30, multiple peaks/valleys.
+
+    // Randomly choose a complexity from 1 to maxLvl
+    // This gives players variety and simpler pieces even at high complexity
+    const lvl = 1 + Math.floor(Math.random() * maxLvl);
 
     const width = Math.min(60, 12 + lvl * 4);
     const arr = [];
@@ -192,6 +197,7 @@ window.addEventListener("load", function () {
     packet.xIndex = Math.floor(POINTS / 2) - Math.floor(packet.vals.length / 2);
     packet.yOffset = -HEIGHT * 0.3;
     isDropping = false;
+    isInverted = false; // Reset inversion state for new wavelet
   }
 
   // --- ENGINE ---
@@ -286,6 +292,13 @@ window.addEventListener("load", function () {
   }
 
   function mergeSignal() {
+    // Consume invert use if the wavelet was inverted
+    if (isInverted) {
+      invertCount--;
+      updateInvertButton();
+      isInverted = false; // Reset flag after consuming
+    }
+
     let maxImpact = 0;
 
     // Calculate RMS before merge
@@ -412,7 +425,8 @@ window.addEventListener("load", function () {
 
   function gameWin() {
     gameRunning = false;
-    showGameMenu("SILENCE ACHIEVED!", "#00ff00");
+    const piecesUsed = 120 - piecesRemaining;
+    showGameMenu(`SILENCE ACHIEVED! (${piecesUsed} pieces used)`, "#00ff00");
   }
 
   function gameOver() {
@@ -469,6 +483,11 @@ window.addEventListener("load", function () {
 
   function resetGame() {
     hideGameMenu();
+
+    // Reset merge animation to prevent old clipped signal from being shown
+    mergeAnimation.active = false;
+    mergeAnimation.frame = 0;
+
     generateNoise();
     complexity = 1;
     score = 0;
@@ -544,12 +563,15 @@ window.addEventListener("load", function () {
 
     triggerHaptic();
 
+    // Toggle inversion state (can invert/uninvert freely)
     for (let i = 0; i < packet.vals.length; i++) {
       packet.vals[i] *= -1;
     }
 
-    invertCount--;
-    updateInvertButton();
+    // Toggle the inverted flag
+    isInverted = !isInverted;
+
+    // Don't consume an invert use yet - only when dropping
   }
 
   function spawnParticle(x, y, color) {
@@ -802,6 +824,49 @@ window.addEventListener("load", function () {
     }
   }
 
+  // Keyboard controls for desktop
+  function moveWavelet(direction) {
+    if (!gameRunning || isDropping) return;
+
+    const moveAmount = 2; // Move by 2 segments per keypress
+    packet.xIndex += direction * moveAmount;
+
+    // Bounds Check
+    const halfWidth = Math.floor(packet.vals.length / 2);
+    if (packet.xIndex < -halfWidth) packet.xIndex = -halfWidth;
+    if (packet.xIndex + halfWidth > POINTS) packet.xIndex = POINTS - halfWidth;
+  }
+
+  function dropWavelet() {
+    if (!gameRunning || isDropping) return;
+    isDropping = true;
+    triggerHaptic();
+  }
+
+  // Keyboard event handlers
+  document.addEventListener("keydown", (e) => {
+    if (!gameRunning) return;
+
+    switch (e.key) {
+      case "ArrowLeft":
+        e.preventDefault();
+        moveWavelet(-1);
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        moveWavelet(1);
+        break;
+      case " ": // Space bar
+        e.preventDefault();
+        dropWavelet();
+        break;
+      case "Shift":
+        e.preventDefault();
+        invertWavelet();
+        break;
+    }
+  });
+
   function inputEnd(fromCanvas = true) {
     // Handle game over restart - now handled by menu buttons
     // if (!gameRunning) {
@@ -924,7 +989,8 @@ window.addEventListener("load", function () {
   }
 
   canvas.addEventListener("mousedown", (e) => {
-    if (!isClickOnHUD(e.clientX, e.clientY)) {
+    // Only handle left-click (button 0)
+    if (e.button === 0 && !isClickOnHUD(e.clientX, e.clientY)) {
       inputStart(e.clientX, e.clientY);
     }
   });
@@ -938,7 +1004,12 @@ window.addEventListener("load", function () {
     { passive: false },
   );
 
-  canvas.addEventListener("mousemove", (e) => inputMove(e.clientX));
+  canvas.addEventListener("mousemove", (e) => {
+    // Only handle movement during left-click drag
+    if (e.buttons === 1) {
+      inputMove(e.clientX);
+    }
+  });
   canvas.addEventListener(
     "touchmove",
     (e) => {
@@ -949,7 +1020,8 @@ window.addEventListener("load", function () {
   );
 
   canvas.addEventListener("mouseup", (e) => {
-    if (!isClickOnHUD(e.clientX, e.clientY)) {
+    // Only handle left-click release (button 0)
+    if (e.button === 0 && !isClickOnHUD(e.clientX, e.clientY)) {
       inputEnd(true);
     }
   });
@@ -959,6 +1031,12 @@ window.addEventListener("load", function () {
     if (!isClickOnHUD(touch.clientX, touch.clientY)) {
       inputEnd(true);
     }
+  });
+
+  // Right-click to invert (canvas only)
+  canvas.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    invertWavelet();
   });
 
   // Boot
