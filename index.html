@@ -23,24 +23,44 @@
   <body>
     <div id="splash-screen">
       <h1>SILENCE</h1>
+      <hr />
       <p>Cancel the noise signal using destructive interference</p>
       <p><strong>DRAG:</strong> Position wavelet horizontally</p>
       <p><strong>TAP:</strong> Drop wavelet to merge</p>
       <p><strong>INVERT:</strong> Flip wavelet vertically (limited uses)</p>
-      <p>
-        Keep RMS below 5.0 to survive. Wavelets grow more complex as you
-        approach silence.
-      </p>
-      <div class="tap-hint">TAP TO START</div>
+      <hr />
+      <div class="mode-selector">
+        <div class="mode-label">GAME MODE:</div>
+        <label class="radio-option">
+          <input type="radio" name="game-mode" value="endless" checked />
+          <span>ENDLESS - Reach RMS &lt; 0.1</span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="game-mode" value="piece-based" />
+          <span>PIECE-BASED - Best RMS in 120 pieces</span>
+        </label>
+      </div>
+      <button id="start-btn">START GAME</button>
+    </div>
+
+    <div id="game-menu" style="display: none;">
+      <h2>MENU</h2>
+      <p>Current Mode: <span id="current-mode-display">ENDLESS</span></p>
+      <button id="restart-btn">RESTART GAME</button>
+      <button id="change-mode-btn">CHANGE MODE</button>
+      <button id="resume-btn">RESUME</button>
     </div>
 
     <div id="game-ui">
-      <div class="hud-text">
+      <div class="hud-text clickable" id="rms-display">
         RMS: <span id="noise-lvl">0.00</span
         ><i id="rms-trend" class="rms-indicator"></i>
       </div>
-      <div class="hud-text" id="status-display">
+      <div class="hud-text clickable" id="status-display">
         COMPLEXITY: <span id="complexity-disp">1</span>
+        <div id="piece-counter" style="display: none;">
+          PIECES: <span id="pieces-remaining">120</span>
+        </div>
       </div>
     </div>
     <canvas id="scope"></canvas>

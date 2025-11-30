@@ -31,6 +31,25 @@ canvas {
   border: 1px solid #33ff00;
   font-size: 20px;
   text-shadow: 0 0 5px #33ff00;
+  align-self: flex-start;
+}
+
+.hud-text.clickable {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.hud-text.clickable:hover {
+  background: rgba(0, 40, 0, 0.9);
+  box-shadow: 0 0 10px rgba(51, 255, 0, 0.3);
+}
+
+#piece-counter {
+  font-size: 16px;
+  margin-top: 5px;
+  border-top: 1px solid #33ff00;
+  padding-top: 5px;
 }
 
 .rms-indicator {
@@ -92,7 +111,6 @@ canvas {
   text-align: center;
   z-index: 100;
   box-shadow: 0 0 30px #33ff00;
-  cursor: pointer;
 }
 
 #splash-screen h1 {
@@ -110,11 +128,140 @@ canvas {
   color: #88ff88;
 }
 
-#splash-screen .tap-hint {
-  margin-top: 40px;
+#splash-screen hr {
+  border: none;
+  border-top: 1px solid #33ff00;
+  margin: 20px 0;
+  box-shadow: 0 0 5px rgba(51, 255, 0, 0.3);
+}
+
+.mode-selector {
+  margin: 30px 0;
+  padding: 20px;
+}
+
+.mode-label {
+  display: block;
+  margin-bottom: 15px;
+  color: #33ff00;
   font-size: 16px;
-  color: #00aa00;
-  animation: pulse 2s infinite;
+  text-align: center;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  margin: 12px 0;
+  color: #88ff88;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+}
+
+.radio-option:hover {
+  background: rgba(0, 20, 0, 0.5);
+  border-color: #33ff00;
+}
+
+.radio-option input[type="radio"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #33ff00;
+  border-radius: 50%;
+  margin-right: 12px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.radio-option input[type="radio"]:checked {
+  border-color: #33ff00;
+  box-shadow: 0 0 8px #33ff00;
+}
+
+.radio-option input[type="radio"]:checked::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #33ff00;
+  box-shadow: 0 0 5px #33ff00;
+}
+
+.radio-option span {
+  flex: 1;
+}
+
+#start-btn {
+  background: rgba(0, 20, 0, 0.8);
+  border: 2px solid #33ff00;
+  color: #33ff00;
+  font-family: "monoidregular", monospace;
+  font-size: 18px;
+  padding: 15px 40px;
+  margin-top: 20px;
+  cursor: pointer;
+  text-shadow: 0 0 5px #33ff00;
+  box-shadow: 0 0 10px rgba(51, 255, 0, 0.3);
+  transition: all 0.2s;
+}
+
+#start-btn:hover {
+  background: rgba(0, 40, 0, 0.9);
+  box-shadow: 0 0 15px rgba(51, 255, 0, 0.5);
+}
+
+#game-menu {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 20, 0, 0.98);
+  border: 2px solid #33ff00;
+  padding: 40px 60px;
+  text-align: center;
+  z-index: 100;
+  box-shadow: 0 0 30px #33ff00;
+}
+
+#game-menu h2 {
+  font-family: "Sixtyfour", monospace;
+  font-size: 48px;
+  color: #33ff00;
+  margin: 0 0 20px 0;
+  text-shadow: 0 0 10px #33ff00;
+}
+
+#game-menu p {
+  font-size: 18px;
+  margin: 15px 0;
+  color: #88ff88;
+}
+
+#game-menu button {
+  background: rgba(0, 20, 0, 0.8);
+  border: 2px solid #33ff00;
+  color: #33ff00;
+  font-family: "monoidregular", monospace;
+  font-size: 16px;
+  padding: 12px 30px;
+  margin: 10px;
+  cursor: pointer;
+  text-shadow: 0 0 5px #33ff00;
+  box-shadow: 0 0 10px rgba(51, 255, 0, 0.3);
+  transition: all 0.2s;
+}
+
+#game-menu button:hover {
+  background: rgba(0, 40, 0, 0.9);
+  box-shadow: 0 0 15px rgba(51, 255, 0, 0.5);
 }
 
 @media (max-width: 768px) {
@@ -135,6 +282,7 @@ canvas {
   #splash-screen {
     width: 90vw;
     box-sizing: border-box;
+    padding: 30px 20px;
   }
 
   #splash-screen h1 {
@@ -149,9 +297,45 @@ canvas {
     margin: 10px 0;
   }
 
-  #splash-screen .tap-hint {
-    margin-top: 30px;
+  .mode-selector {
+    padding: 15px;
+  }
+
+  .mode-label {
+    font-size: 14px;
+  }
+
+  .radio-option {
     font-size: 12px;
+  }
+
+  #start-btn {
+    font-size: 16px;
+    padding: 12px 30px;
+  }
+
+  #game-menu {
+    width: 90vw;
+    box-sizing: border-box;
+    padding: 30px 20px;
+  }
+
+  #game-menu h2 {
+    font-size: 36px;
+  }
+
+  #game-menu p {
+    font-size: 14px;
+  }
+
+  #game-menu button {
+    font-size: 14px;
+    padding: 10px 20px;
+    margin: 5px;
+  }
+
+  #piece-counter {
+    font-size: 14px;
   }
 }
 

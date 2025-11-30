@@ -24,6 +24,11 @@ window.addEventListener("load", function () {
   // Preview queue - holds next 3 wavelets
   let waveletQueue = [];
 
+  // Game mode state
+  let gameMode = "endless"; // "endless" or "piece-based"
+  let piecesRemaining = 120;
+  let bestRMS = Infinity;
+
   function resize() {
     const dpr = window.devicePixelRatio || 1;
     canvas.width = window.innerWidth * dpr;
@@ -130,6 +135,11 @@ window.addEventListener("load", function () {
     let rms = Math.sqrt(sumSq / POINTS);
     document.getElementById("noise-lvl").innerText = rms.toFixed(2);
 
+    // Track best RMS for piece-based mode
+    if (gameMode === "piece-based" && rms < bestRMS) {
+      bestRMS = rms;
+    }
+
     // Update trend indicator with persistence
     if (rmsTrendTimer > 0) {
       rmsTrendTimer--;
@@ -138,14 +148,27 @@ window.addEventListener("load", function () {
       }
     }
 
-    // Win condition
-    if (rms < 0.1) {
-      gameWin();
-    }
+    // Win/lose conditions depend on game mode
+    if (gameMode === "endless") {
+      // Win condition
+      if (rms < 0.1) {
+        gameWin();
+      }
 
-    // Game over conditions
-    if (maxVal > 25 || rms > 5) {
-      gameOver();
+      // Game over conditions
+      if (maxVal > 25 || rms > 5) {
+        gameOver();
+      }
+    } else if (gameMode === "piece-based") {
+      // Piece-based mode: end when pieces run out
+      if (piecesRemaining <= 0) {
+        gamePieceEnd();
+      }
+
+      // Still can fail if signal clips too hard
+      if (maxVal > 25 || rms > 5) {
+        gameOver();
+      }
     }
 
     // Logic
@@ -222,27 +245,33 @@ window.addEventListener("load", function () {
     }
     lastRMS = rmsAfter;
 
-    // Progression - complexity based on RMS reduction
+    // Progression - complexity based on RMS reduction (only in endless mode)
     score++;
 
-    // Increase complexity as player reduces RMS
-    // Start at ~2.5 RMS, complexity 1
-    // Every time RMS drops below certain thresholds, increase complexity
-    if (rmsAfter < 2.0 && complexity === 1) {
-      complexity = 2;
-      document.getElementById("complexity-disp").innerText = complexity;
-    } else if (rmsAfter < 1.5 && complexity === 2) {
-      complexity = 3;
-      document.getElementById("complexity-disp").innerText = complexity;
-    } else if (rmsAfter < 1.0 && complexity === 3) {
-      complexity = 4;
-      document.getElementById("complexity-disp").innerText = complexity;
-    } else if (rmsAfter < 0.7 && complexity === 4) {
-      complexity = 5;
-      document.getElementById("complexity-disp").innerText = complexity;
-    } else if (rmsAfter < 0.5 && complexity === 5) {
-      complexity = 6;
-      document.getElementById("complexity-disp").innerText = complexity;
+    if (gameMode === "endless") {
+      // Increase complexity as player reduces RMS
+      // Start at ~2.5 RMS, complexity 1
+      // Every time RMS drops below certain thresholds, increase complexity
+      if (rmsAfter < 2.0 && complexity === 1) {
+        complexity = 2;
+        document.getElementById("complexity-disp").innerText = complexity;
+      } else if (rmsAfter < 1.5 && complexity === 2) {
+        complexity = 3;
+        document.getElementById("complexity-disp").innerText = complexity;
+      } else if (rmsAfter < 1.0 && complexity === 3) {
+        complexity = 4;
+        document.getElementById("complexity-disp").innerText = complexity;
+      } else if (rmsAfter < 0.7 && complexity === 4) {
+        complexity = 5;
+        document.getElementById("complexity-disp").innerText = complexity;
+      } else if (rmsAfter < 0.5 && complexity === 5) {
+        complexity = 6;
+        document.getElementById("complexity-disp").innerText = complexity;
+      }
+    } else if (gameMode === "piece-based") {
+      // Update pieces counter
+      piecesRemaining--;
+      document.getElementById("pieces-remaining").innerText = piecesRemaining;
     }
 
     spawnPacket();
@@ -250,26 +279,55 @@ window.addEventListener("load", function () {
 
   function gameWin() {
     gameRunning = false;
-    const statusEl = document.getElementById("status-display");
-    statusEl.innerText = "SILENCE ACHIEVED! TAP TO RESTART";
-    statusEl.style.borderColor = "#00ff00";
-    statusEl.style.color = "#00ff00";
+    showGameMenu("SILENCE ACHIEVED!", "#00ff00");
   }
 
   function gameOver() {
     gameRunning = false;
-    const statusEl = document.getElementById("status-display");
-    statusEl.innerText = "OVERLOAD - TAP TO RESTART";
-    statusEl.style.borderColor = "red";
-    statusEl.style.color = "red";
+    showGameMenu("OVERLOAD - SIGNAL CLIPPED", "red");
+  }
+
+  function gamePieceEnd() {
+    gameRunning = false;
+    showGameMenu(
+      `GAME OVER - Best RMS: ${bestRMS.toFixed(2)}`,
+      bestRMS < 0.5 ? "#00ff00" : "#ffcc00",
+    );
+  }
+
+  function showGameMenu(message, color) {
+    const menuEl = document.getElementById("game-menu");
+    const modeDisplayEl = document.getElementById("current-mode-display");
+    modeDisplayEl.innerText =
+      gameMode === "endless" ? "ENDLESS" : "PIECE-BASED";
+
+    // Show message in menu
+    let messageEl = document.getElementById("game-status-message");
+    if (!messageEl) {
+      messageEl = document.createElement("p");
+      messageEl.id = "game-status-message";
+      menuEl.insertBefore(messageEl, menuEl.children[1]);
+    }
+    messageEl.innerText = message;
+    messageEl.style.color = color;
+
+    menuEl.style.display = "block";
+  }
+
+  function hideGameMenu() {
+    document.getElementById("game-menu").style.display = "none";
   }
 
   function resetGame() {
+    hideGameMenu();
     generateNoise();
     complexity = 1;
     score = 0;
     invertCount = 5;
     waveletQueue = [];
+    bestRMS = Infinity;
+    piecesRemaining = 120;
+
     // Pre-fill queue with 3 wavelets
     for (let i = 0; i < 3; i++) {
       waveletQueue.push(createProceduralPacket(complexity));
@@ -278,14 +336,35 @@ window.addEventListener("load", function () {
     gameRunning = true;
 
     const statusEl = document.getElementById("status-display");
-    statusEl.innerText = "COMPLEXITY: ";
     statusEl.style.borderColor = "#33ff00";
     statusEl.style.color = "#33ff00";
 
-    const complexitySpan = document.createElement("span");
-    complexitySpan.id = "complexity-disp";
+    // Update or create complexity display
+    let complexitySpan = document.getElementById("complexity-disp");
+    if (!complexitySpan) {
+      statusEl.innerHTML = "COMPLEXITY: ";
+      complexitySpan = document.createElement("span");
+      complexitySpan.id = "complexity-disp";
+      statusEl.appendChild(complexitySpan);
+    }
     complexitySpan.innerText = complexity;
-    statusEl.appendChild(complexitySpan);
+
+    // Show/hide piece counter based on game mode
+    let pieceCounter = document.getElementById("piece-counter");
+    if (!pieceCounter) {
+      pieceCounter = document.createElement("div");
+      pieceCounter.id = "piece-counter";
+      pieceCounter.style.display = "none";
+      pieceCounter.innerHTML = 'PIECES: <span id="pieces-remaining">120</span>';
+      statusEl.appendChild(pieceCounter);
+    }
+
+    if (gameMode === "piece-based") {
+      pieceCounter.style.display = "block";
+      document.getElementById("pieces-remaining").innerText = piecesRemaining;
+    } else {
+      pieceCounter.style.display = "none";
+    }
 
     updateInvertButton();
   }
@@ -545,38 +624,67 @@ window.addEventListener("load", function () {
   }
 
   function inputEnd(fromCanvas = true) {
-    // Handle splash screen
-    if (!gameStarted) {
-      document.getElementById("splash-screen").style.display = "none";
-      gameStarted = true;
-      gameRunning = true;
-      isDragging = false;
-      isMouseDown = false;
-      return;
-    }
-
-    // Handle game over restart
-    if (!gameRunning) {
-      resetGame();
-      isDragging = false;
-      isMouseDown = false;
-      return;
-    }
+    // Handle game over restart - now handled by menu buttons
+    // if (!gameRunning) {
+    //   resetGame();
+    //   isDragging = false;
+    //   isMouseDown = false;
+    //   return;
+    // }
 
     // Normal game input - only from canvas, and only tap (not drag) to drop
-    if (fromCanvas && !isDragging && !isDropping) {
+    if (fromCanvas && !isDragging && !isDropping && gameRunning) {
       isDropping = true;
     }
     isDragging = false;
     isMouseDown = false;
   }
 
-  // Splash screen click handlers
-  const splashScreen = document.getElementById("splash-screen");
-  splashScreen.addEventListener("click", () => inputEnd(false));
-  splashScreen.addEventListener("touchend", (e) => {
-    e.preventDefault();
-    inputEnd(false);
+  // Start button handler
+  const startBtn = document.getElementById("start-btn");
+  startBtn.addEventListener("click", () => {
+    const modeRadio = document.querySelector('input[name="game-mode"]:checked');
+    gameMode = modeRadio.value;
+    document.getElementById("splash-screen").style.display = "none";
+    gameStarted = true;
+    resetGame();
+  });
+
+  // Game menu handlers
+  const restartBtn = document.getElementById("restart-btn");
+  restartBtn.addEventListener("click", () => {
+    resetGame();
+  });
+
+  const changeModeBtn = document.getElementById("change-mode-btn");
+  changeModeBtn.addEventListener("click", () => {
+    hideGameMenu();
+    document.getElementById("splash-screen").style.display = "block";
+  });
+
+  const resumeBtn = document.getElementById("resume-btn");
+  resumeBtn.addEventListener("click", () => {
+    if (gameRunning) {
+      hideGameMenu();
+    }
+  });
+
+  // HUD click handlers to open menu
+  const rmsDisplay = document.getElementById("rms-display");
+  const statusDisplay = document.getElementById("status-display");
+
+  rmsDisplay.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (gameRunning) {
+      showGameMenu("PAUSED", "#ffcc00");
+    }
+  });
+
+  statusDisplay.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (gameRunning) {
+      showGameMenu("PAUSED", "#ffcc00");
+    }
   });
 
   // Invert button handler
@@ -587,10 +695,34 @@ window.addEventListener("load", function () {
     invertWavelet();
   });
 
-  canvas.addEventListener("mousedown", (e) => inputStart(e.clientX, e.clientY));
+  function isClickOnHUD(x, y) {
+    const rmsRect = rmsDisplay.getBoundingClientRect();
+    const statusRect = statusDisplay.getBoundingClientRect();
+
+    return (
+      (x >= rmsRect.left &&
+        x <= rmsRect.right &&
+        y >= rmsRect.top &&
+        y <= rmsRect.bottom) ||
+      (x >= statusRect.left &&
+        x <= statusRect.right &&
+        y >= statusRect.top &&
+        y <= statusRect.bottom)
+    );
+  }
+
+  canvas.addEventListener("mousedown", (e) => {
+    if (!isClickOnHUD(e.clientX, e.clientY)) {
+      inputStart(e.clientX, e.clientY);
+    }
+  });
   canvas.addEventListener(
     "touchstart",
-    (e) => inputStart(e.touches[0].clientX, e.touches[0].clientY),
+    (e) => {
+      if (!isClickOnHUD(e.touches[0].clientX, e.touches[0].clientY)) {
+        inputStart(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    },
     { passive: false },
   );
 
@@ -604,10 +736,17 @@ window.addEventListener("load", function () {
     { passive: false },
   );
 
-  canvas.addEventListener("mouseup", () => inputEnd(true));
+  canvas.addEventListener("mouseup", (e) => {
+    if (!isClickOnHUD(e.clientX, e.clientY)) {
+      inputEnd(true);
+    }
+  });
   canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
-    inputEnd(true);
+    const touch = e.changedTouches[0];
+    if (!isClickOnHUD(touch.clientX, touch.clientY)) {
+      inputEnd(true);
+    }
   });
 
   // Boot
