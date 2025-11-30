@@ -359,6 +359,17 @@ window.addEventListener('load', function() {
     }
 
     // --- RENDER ---
+    // Catmull-Rom spline interpolation for smooth curves
+    function catmullRom(p0, p1, p2, p3, t) {
+        const v0 = (p2 - p0) * 0.5;
+        const v1 = (p3 - p1) * 0.5;
+        const t2 = t * t;
+        const t3 = t * t2;
+        return (2 * p1 - 2 * p2 + v0 + v1) * t3 +
+               (-3 * p1 + 3 * p2 - 2 * v0 - v1) * t2 +
+               v0 * t + p1;
+    }
+
     function drawLine(data, offsetY, color, width, glow) {
         ctx.strokeStyle = color;
         ctx.lineWidth = width;
@@ -366,41 +377,83 @@ window.addEventListener('load', function() {
         ctx.shadowBlur = glow ? 5 : 0;
         ctx.shadowColor = color;
         ctx.beginPath();
-        for (let i = 0; i < data.length; i++) {
-            const x = i * SEGMENT_WIDTH;
-            const y = CENTER_Y + offsetY - (data[i] * SCALE_Y);
-            if (i===0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+
+        // Draw smooth curve using spline interpolation
+        for (let i = 0; i < data.length - 1; i++) {
+            const p0 = i > 0 ? data[i - 1] : data[i];
+            const p1 = data[i];
+            const p2 = data[i + 1];
+            const p3 = i < data.length - 2 ? data[i + 2] : data[i + 1];
+
+            const steps = 10; // Subdivisions between points for smoothness
+            for (let s = 0; s <= steps; s++) {
+                const t = s / steps;
+                const x = (i + t) * SEGMENT_WIDTH;
+                const interpolatedY = catmullRom(p0, p1, p2, p3, t);
+                const y = CENTER_Y + offsetY - (interpolatedY * SCALE_Y);
+
+                if (i === 0 && s === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
         }
+
         ctx.stroke();
         ctx.shadowBlur = 0;
     }
 
     function drawPacket() {
-        // Draw the actual floating packet
+        // Draw the actual floating packet with smooth interpolation
         ctx.strokeStyle = '#ffcc00';
         ctx.lineWidth = 3;
         ctx.shadowBlur = 5; ctx.shadowColor = '#ffcc00';
         ctx.beginPath();
-        for (let i = 0; i < packet.vals.length; i++) {
-            const x = (packet.xIndex + i) * SEGMENT_WIDTH;
-            const y = CENTER_Y + packet.yOffset - (packet.vals[i] * SCALE_Y);
-            if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+
+        for (let i = 0; i < packet.vals.length - 1; i++) {
+            const p0 = i > 0 ? packet.vals[i - 1] : packet.vals[i];
+            const p1 = packet.vals[i];
+            const p2 = packet.vals[i + 1];
+            const p3 = i < packet.vals.length - 2 ? packet.vals[i + 2] : packet.vals[i + 1];
+
+            const steps = 10;
+            for (let s = 0; s <= steps; s++) {
+                const t = s / steps;
+                const x = (packet.xIndex + i + t) * SEGMENT_WIDTH;
+                const interpolatedY = catmullRom(p0, p1, p2, p3, t);
+                const y = CENTER_Y + packet.yOffset - (interpolatedY * SCALE_Y);
+
+                if (i === 0 && s === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
         }
+
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // Draw GHOST (Projection) - Critical for alignment now that shapes are complex
+        // Draw GHOST (Projection) with smooth interpolation
         ctx.strokeStyle = 'rgba(255, 204, 0, 0.4)';
         ctx.save();
-        ctx.setLineDash([2, 4]); // Tighter dash
+        ctx.setLineDash([2, 4]);
         ctx.lineWidth = 2;
         ctx.beginPath();
-        for (let i = 0; i < packet.vals.length; i++) {
-            const x = (packet.xIndex + i) * SEGMENT_WIDTH;
-            // Draw it ON TOP of the noise line (y=0 relative to signal)
-            const y = CENTER_Y - (packet.vals[i] * SCALE_Y);
-            if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+
+        for (let i = 0; i < packet.vals.length - 1; i++) {
+            const p0 = i > 0 ? packet.vals[i - 1] : packet.vals[i];
+            const p1 = packet.vals[i];
+            const p2 = packet.vals[i + 1];
+            const p3 = i < packet.vals.length - 2 ? packet.vals[i + 2] : packet.vals[i + 1];
+
+            const steps = 10;
+            for (let s = 0; s <= steps; s++) {
+                const t = s / steps;
+                const x = (packet.xIndex + i + t) * SEGMENT_WIDTH;
+                const interpolatedY = catmullRom(p0, p1, p2, p3, t);
+                const y = CENTER_Y - (interpolatedY * SCALE_Y);
+
+                if (i === 0 && s === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
         }
+
         ctx.stroke();
         ctx.restore();
     }
