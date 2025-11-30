@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="fonts/iconoir/iconoir.css">
 <style>
-  body { background-color: #050505; color: #33ff00; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: none; height: 100vh; }
+  body { background-color: #000000; color: #33ff00; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: none; height: 100vh; }
   canvas { display: block; width: 100%; height: 100%; }
   #game-ui { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; pointer-events: none; z-index: 30; }
-  .hud-text { background: rgba(0, 20, 0, 0.8); padding: 5px 10px; border: 1px solid #33ff00; font-size: 14px; text-shadow: 0 0 5px #33ff00; }
+  .hud-text { background: rgba(0, 20, 0, 0.8); padding: 8px 15px; border: 1px solid #33ff00; font-size: 20px; text-shadow: 0 0 5px #33ff00; }
+  .rms-indicator { margin-left: 8px; display: inline-block; vertical-align: middle; }
   #controls-hint { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #00aa00; font-size: 12px; pointer-events: none; z-index: 30; }
   /* Status overlay for "Complexity Level" */
   #level-indicator { position: absolute; top: 50px; left: 10px; font-size: 10px; color: #008800; pointer-events: none; }
@@ -16,7 +18,7 @@
 <body>
 
 <div id="game-ui">
-  <div class="hud-text">RMS: <span id="noise-lvl">0.00</span></div>
+  <div class="hud-text">RMS: <span id="noise-lvl">0.00</span><i id="rms-trend" class="rms-indicator"></i></div>
   <div class="hud-text" id="status">ACQUIRING</div>
 </div>
 <div id="level-indicator">HARMONICS: <span id="complexity-disp">1</span></div>
@@ -38,10 +40,12 @@ window.addEventListener('load', function() {
     let packet = { vals: [], xIndex: 0, yOffset: -150 };
     let isDropping = false;
     let gameRunning = true;
-    
+
     // Progression
     let score = 0;
     let complexity = 1; // Starts simple (1-2 bumps), scales up
+    let lastRMS = 0;
+    let rmsTrendTimer = 0;
 
     function resize() {
         const dpr = window.devicePixelRatio || 1;
@@ -143,6 +147,14 @@ window.addEventListener('load', function() {
         let rms = Math.sqrt(sumSq / POINTS);
         document.getElementById('noise-lvl').innerText = rms.toFixed(2);
 
+        // Update trend indicator with persistence
+        if (rmsTrendTimer > 0) {
+            rmsTrendTimer--;
+            if (rmsTrendTimer === 0) {
+                document.getElementById('rms-trend').className = 'rms-indicator';
+            }
+        }
+
         // Dynamic Clipping Threshold
         if (maxVal > 25) { 
             gameOver();
@@ -164,17 +176,25 @@ window.addEventListener('load', function() {
 
     function mergeSignal() {
         let maxImpact = 0;
-        
+
+        // Calculate RMS before merge
+        let sumSqBefore = 0;
+        for(let i=0; i<POINTS; i++) {
+            let v = noiseSignal[i] || 0;
+            sumSqBefore += v*v;
+        }
+        let rmsBefore = Math.sqrt(sumSqBefore / POINTS);
+
         for (let i = 0; i < packet.vals.length; i++) {
             const idx = packet.xIndex + i;
             if (idx >= 0 && idx < POINTS) {
                 const oldVal = noiseSignal[idx];
                 noiseSignal[idx] += packet.vals[i];
-                
+
                 // Visual feedback: Calculate how much we reduced/increased the signal
                 const delta = Math.abs(oldVal) - Math.abs(noiseSignal[idx]);
-                
-                // If delta is positive, we reduced noise (Good). 
+
+                // If delta is positive, we reduced noise (Good).
                 // If negative, we added noise (Bad).
                 if (delta > 0.5) {
                    spawnParticle(idx * SEGMENT_WIDTH, CENTER_Y - (noiseSignal[idx]*SCALE_Y), '#00ff00'); // Green spark
@@ -183,11 +203,31 @@ window.addEventListener('load', function() {
                 }
             }
         }
-        
+
+        // Calculate RMS after merge and set trend
+        let sumSqAfter = 0;
+        for(let i=0; i<POINTS; i++) {
+            let v = noiseSignal[i] || 0;
+            sumSqAfter += v*v;
+        }
+        let rmsAfter = Math.sqrt(sumSqAfter / POINTS);
+
+        const trendEl = document.getElementById('rms-trend');
+        if (rmsAfter > rmsBefore + 0.05) {
+            trendEl.className = 'rms-indicator iconoir-graph-up';
+            trendEl.style.color = '#ff0000';
+            rmsTrendTimer = 180; // Show for ~3 seconds at 60fps
+        } else if (rmsAfter < rmsBefore - 0.05) {
+            trendEl.className = 'rms-indicator iconoir-graph-down';
+            trendEl.style.color = '#00ff00';
+            rmsTrendTimer = 180; // Show for ~3 seconds at 60fps
+        }
+        lastRMS = rmsAfter;
+
         // Progression
         score++;
         if (score % 3 === 0) complexity++; // Increase difficulty every 3 drops
-        
+
         spawnPacket();
     }
 
@@ -220,7 +260,7 @@ window.addEventListener('load', function() {
         ctx.strokeStyle = color;
         ctx.lineWidth = width;
         ctx.lineJoin = 'round';
-        ctx.shadowBlur = glow ? 15 : 0;
+        ctx.shadowBlur = glow ? 5 : 0;
         ctx.shadowColor = color;
         ctx.beginPath();
         for (let i = 0; i < data.length; i++) {
@@ -236,7 +276,7 @@ window.addEventListener('load', function() {
         // Draw the actual floating packet
         ctx.strokeStyle = '#ffcc00';
         ctx.lineWidth = 3;
-        ctx.shadowBlur = 15; ctx.shadowColor = '#ffcc00';
+        ctx.shadowBlur = 5; ctx.shadowColor = '#ffcc00';
         ctx.beginPath();
         for (let i = 0; i < packet.vals.length; i++) {
             const x = (packet.xIndex + i) * SEGMENT_WIDTH;
@@ -244,6 +284,7 @@ window.addEventListener('load', function() {
             if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
         }
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
         // Draw GHOST (Projection) - Critical for alignment now that shapes are complex
         ctx.strokeStyle = 'rgba(255, 204, 0, 0.4)';
@@ -262,25 +303,22 @@ window.addEventListener('load', function() {
     }
 
     function loop() {
-        ctx.fillStyle = 'rgba(5, 5, 5, 0.4)'; 
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
-        
+
         // Zero Line
         ctx.strokeStyle = '#002200'; ctx.lineWidth=1; ctx.beginPath();
         ctx.moveTo(0, CENTER_Y); ctx.lineTo(WIDTH, CENTER_Y); ctx.stroke();
 
-        ctx.globalCompositeOperation = 'lighter';
         drawLine(noiseSignal, 0, '#33ff00', 2, true);
         if(gameRunning) drawPacket();
-        
+
         particles.forEach(function(p) {
             ctx.fillStyle = p.c;
             ctx.globalAlpha = p.life;
             ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
         });
         ctx.globalAlpha = 1.0;
-        
-        ctx.globalCompositeOperation = 'source-over';
         update();
         requestAnimationFrame(loop);
     }
@@ -288,50 +326,56 @@ window.addEventListener('load', function() {
     // --- INPUT ---
     let startX = 0;
     let isDragging = false;
+    let isMouseDown = false;
 
-    function inputStart(x) { startX = x; isDragging = false; }
-    
+    function inputStart(x) {
+        startX = x;
+        isDragging = false;
+        isMouseDown = true;
+    }
+
     function inputMove(x) {
-        if (!gameRunning) return;
+        if (!gameRunning || !isMouseDown) return;
         const diff = x - startX;
         if (Math.abs(diff) > 5) isDragging = true; // Small deadzone
-        
+
         if (isDragging && !isDropping) {
             // Sensitivity
             if (Math.abs(diff) > SEGMENT_WIDTH * 0.8) {
                 const dir = diff > 0 ? 1 : -1;
                 packet.xIndex += dir;
-                
+
                 // Bounds Check
                 if(packet.xIndex < 0) packet.xIndex = 0;
                 if(packet.xIndex + packet.vals.length > POINTS) packet.xIndex = POINTS - packet.vals.length;
-                
+
                 startX = x;
             }
         }
     }
-    
+
     function inputEnd() {
         if (!gameRunning) { resetGame(); return; }
-        
+
         // If we didn't drag (Tap), or user lifted finger after positioning
         // User asked: "Tap to merge".
         // To allow precise positioning without dropping, we distinguish tap vs drag release?
         // Actually, if drag ends, we just wait.
         // User explicitly said "Tap to merge". That implies a discrete action separate from dragging.
-        
+
         if (!isDragging) {
             if (!isDropping) isDropping = true;
         }
         isDragging = false;
+        isMouseDown = false;
     }
 
     canvas.addEventListener('mousedown', e => inputStart(e.clientX));
     canvas.addEventListener('touchstart', e => inputStart(e.touches[0].clientX), {passive: false});
-    
+
     canvas.addEventListener('mousemove', e => inputMove(e.clientX));
     canvas.addEventListener('touchmove', e => { e.preventDefault(); inputMove(e.touches[0].clientX); }, {passive: false});
-    
+
     canvas.addEventListener('mouseup', inputEnd);
     canvas.addEventListener('touchend', inputEnd);
 
