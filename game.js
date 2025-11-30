@@ -19,6 +19,7 @@ window.addEventListener('load', function() {
     let complexity = 1; // Starts simple (1-2 bumps), scales up
     let lastRMS = 0;
     let rmsTrendTimer = 0;
+    let invertCount = 5; // Limited invert uses
 
     // Preview queue - holds next 3 wavelets
     let waveletQueue = [];
@@ -257,6 +258,7 @@ window.addEventListener('load', function() {
         generateNoise();
         complexity = 1;
         score = 0;
+        invertCount = 5;
         waveletQueue = [];
         // Pre-fill queue with 3 wavelets
         for (let i = 0; i < 3; i++) {
@@ -274,6 +276,31 @@ window.addEventListener('load', function() {
         complexitySpan.id = 'complexity-disp';
         complexitySpan.innerText = complexity;
         statusEl.appendChild(complexitySpan);
+
+        updateInvertButton();
+    }
+
+    function updateInvertButton() {
+        const btn = document.getElementById('invert-btn');
+        const countEl = document.getElementById('invert-count');
+        countEl.innerText = invertCount;
+
+        if (invertCount <= 0) {
+            btn.classList.add('disabled');
+        } else {
+            btn.classList.remove('disabled');
+        }
+    }
+
+    function invertWavelet() {
+        if (invertCount <= 0 || !gameRunning || isDropping) return;
+
+        for (let i = 0; i < packet.vals.length; i++) {
+            packet.vals[i] *= -1;
+        }
+
+        invertCount--;
+        updateInvertButton();
     }
 
     function spawnParticle(x, y, color) {
@@ -502,17 +529,9 @@ window.addEventListener('load', function() {
             return;
         }
 
-        // Normal game input - only if we didn't drag
+        // Normal game input - tap to drop (removed flip on bottom tap)
         if (!isDragging) {
-            if (startY > HEIGHT / 2) {
-                // Lower half: Flip the wavelet
-                for (let i = 0; i < packet.vals.length; i++) {
-                    packet.vals[i] *= -1;
-                }
-            } else {
-                // Upper half: Drop the wavelet
-                if (!isDropping) isDropping = true;
-            }
+            if (!isDropping) isDropping = true;
         }
         isDragging = false;
         isMouseDown = false;
@@ -522,6 +541,14 @@ window.addEventListener('load', function() {
     const splashScreen = document.getElementById('splash-screen');
     splashScreen.addEventListener('click', inputEnd);
     splashScreen.addEventListener('touchend', inputEnd);
+
+    // Invert button handler
+    const invertBtn = document.getElementById('invert-btn');
+    invertBtn.addEventListener('click', invertWavelet);
+    invertBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        invertWavelet();
+    });
 
     canvas.addEventListener('mousedown', e => inputStart(e.clientX, e.clientY));
     canvas.addEventListener('touchstart', e => inputStart(e.touches[0].clientX, e.touches[0].clientY), {passive: false});

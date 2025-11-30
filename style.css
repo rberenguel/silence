@@ -50,6 +50,37 @@ canvas {
   z-index: 30;
 }
 
+#invert-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(0, 20, 0, 0.8);
+  border: 2px solid #33ff00;
+  color: #33ff00;
+  font-family: 'monoidregular', monospace;
+  font-size: 16px;
+  padding: 12px 20px;
+  cursor: pointer;
+  text-shadow: 0 0 5px #33ff00;
+  box-shadow: 0 0 10px rgba(51, 255, 0, 0.3);
+  z-index: 30;
+  pointer-events: auto;
+}
+
+#invert-btn:active {
+  background: rgba(0, 40, 0, 0.9);
+  box-shadow: 0 0 15px rgba(51, 255, 0, 0.5);
+}
+
+#invert-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: #666;
+  color: #666;
+  text-shadow: none;
+  box-shadow: none;
+}
+
 #splash-screen {
   position: fixed;
   top: 50%;

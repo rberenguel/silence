@@ -20,8 +20,8 @@
   <h1>SILENCE</h1>
   <p>Cancel the noise signal using destructive interference</p>
   <p><strong>DRAG:</strong> Position wavelet horizontally</p>
-  <p><strong>TAP TOP:</strong> Drop wavelet to merge</p>
-  <p><strong>TAP BOTTOM:</strong> Flip wavelet polarity</p>
+  <p><strong>TAP:</strong> Drop wavelet to merge</p>
+  <p><strong>INVERT:</strong> Flip wavelet polarity (limited uses)</p>
   <p>Keep RMS below 5.0 to survive</p>
   <div class="tap-hint">TAP TO START</div>
 </div>
@@ -31,7 +31,8 @@
   <div class="hud-text" id="status-display">COMPLEXITY: <span id="complexity-disp">1</span></div>
 </div>
 <canvas id="scope"></canvas>
-<div id="controls-hint">DRAG: Align Phase | TAP TOP: Drop | TAP BOTTOM: Flip</div>
+<div id="controls-hint">DRAG: Position | TAP: Drop</div>
+<button id="invert-btn">INVERT (<span id="invert-count">5</span>)</button>
 
 <script src="game.js"></script>
 <script>
