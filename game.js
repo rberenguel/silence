@@ -466,10 +466,13 @@ window.addEventListener('load', function() {
         if (Math.abs(diff) > 5) isDragging = true; // Small deadzone
 
         if (isDragging && !isDropping) {
-            // Sensitivity - faster movement
-            if (Math.abs(diff) > SEGMENT_WIDTH * 0.3) {
-                const dir = diff > 0 ? 1 : -1;
-                packet.xIndex += dir;
+            // Direct pixel-based movement - more responsive
+            const pixelsMoved = diff;
+            const segmentsToMove = Math.floor(Math.abs(pixelsMoved) / (SEGMENT_WIDTH * 0.3));
+
+            if (segmentsToMove > 0) {
+                const dir = pixelsMoved > 0 ? 1 : -1;
+                packet.xIndex += dir * segmentsToMove;
 
                 // Bounds Check
                 if(packet.xIndex < 0) packet.xIndex = 0;
