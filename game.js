@@ -388,10 +388,12 @@ window.addEventListener("load", function () {
     }
 
     menuEl.style.display = "block";
+    document.getElementById("canvas-overlay").classList.add("active");
   }
 
   function hideGameMenu() {
     document.getElementById("game-menu").style.display = "none";
+    document.getElementById("canvas-overlay").classList.remove("active");
   }
 
   function resetGame() {
@@ -749,6 +751,7 @@ window.addEventListener("load", function () {
     const modeRadio = document.querySelector('input[name="game-mode"]:checked');
     gameMode = modeRadio.value;
     document.getElementById("splash-screen").style.display = "none";
+    document.getElementById("canvas-overlay").classList.remove("active");
     gameStarted = true;
     resetGame();
   });
@@ -766,6 +769,7 @@ window.addEventListener("load", function () {
     hideGameMenu();
     updateSplashHighScores();
     document.getElementById("splash-screen").style.display = "block";
+    document.getElementById("canvas-overlay").classList.add("active");
   });
 
   const resumeBtn = document.getElementById("resume-btn");
@@ -863,6 +867,9 @@ window.addEventListener("load", function () {
     initHaptic();
     await loadHighScores();
     updateSplashHighScores();
+
+    // Activate overlay since splash screen is visible on load
+    document.getElementById("canvas-overlay").classList.add("active");
 
     generateNoise();
     // Pre-fill queue with 3 wavelets

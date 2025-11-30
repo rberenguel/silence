@@ -14,6 +14,26 @@ canvas {
   height: 100%;
 }
 
+#canvas-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#canvas-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 #game-ui {
   position: absolute;
   top: 10px;
