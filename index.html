@@ -25,6 +25,7 @@
       <h1>SILENCE</h1>
       <hr />
       <p>Cancel the noise signal using destructive interference</p>
+      <hr />
       <p><strong>DRAG:</strong> Position wavelet horizontally</p>
       <p><strong>TAP:</strong> Drop wavelet to merge</p>
       <p><strong>INVERT:</strong> Flip wavelet vertically (limited uses)</p>
@@ -40,17 +41,24 @@
           <span>PIECE-BASED - Best RMS in 120 pieces</span>
         </label>
       </div>
-      <div id="splash-high-scores" style="display: none;">
+      <div id="splash-high-scores" style="display: none">
         <h3>HIGH SCORES</h3>
         <div id="splash-high-scores-list"></div>
+      </div>
+      <div id="install-instructions">
+        <p>
+          You can install this as a Progressive Web App (PWA) to play offline
+          with <code>Share -> Add to Home Screen</code> or
+          <code>⋮ -> Install App (or Add to Home Screen)</code>
+        </p>
       </div>
       <button id="start-btn">START GAME</button>
     </div>
 
-    <div id="game-menu" style="display: none;">
+    <div id="game-menu" style="display: none">
       <h2>MENU</h2>
       <p>Current Mode: <span id="current-mode-display">ENDLESS</span></p>
-      <div id="high-scores-section" style="display: none;">
+      <div id="high-scores-section" style="display: none">
         <h3>HIGH SCORES</h3>
         <div id="high-scores-list"></div>
       </div>
@@ -66,7 +74,7 @@
       </div>
       <div class="hud-text clickable" id="status-display">
         COMPLEXITY: <span id="complexity-disp">1</span>
-        <div id="piece-counter" style="display: none;">
+        <div id="piece-counter" style="display: none">
           PIECES: <span id="pieces-remaining">120</span>
         </div>
       </div>

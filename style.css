@@ -102,9 +102,9 @@ canvas {
 
 #splash-screen {
   position: fixed;
-  top: 50%;
+  top: 20%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -20%);
   background: rgba(0, 20, 0, 0.95);
   border: 2px solid #33ff00;
   padding: 40px 60px;
@@ -124,20 +124,19 @@ canvas {
 #splash-screen p {
   font-size: 18px;
   line-height: 1.8;
-  margin: 12px 0;
+  margin: 4px 0;
   color: #88ff88;
 }
 
 #splash-screen hr {
   border: none;
   border-top: 1px solid #33ff00;
-  margin: 20px 0;
+  margin: 1vh 0;
   box-shadow: 0 0 5px rgba(51, 255, 0, 0.3);
 }
 
 .mode-selector {
-  margin: 30px 0;
-  padding: 20px;
+  margin: 5px 0;
 }
 
 .mode-label {
@@ -244,6 +243,17 @@ canvas {
   color: #88ff88;
 }
 
+#install-instructions {
+  text-align: justify;
+}
+
+#install-instructions code {
+  padding: 0.1em;
+  padding-right: 0.3em;
+  padding-left: 0.3em;
+  background-color: #cccc0055;
+}
+
 #game-menu button {
   background: rgba(0, 20, 0, 0.8);
   border: 2px solid #33ff00;
@@ -333,11 +343,7 @@ canvas {
   #splash-screen p {
     font-size: 14px;
     line-height: 1.6;
-    margin: 10px 0;
-  }
-
-  .mode-selector {
-    padding: 15px;
+    margin: 2px 0;
   }
 
   .mode-label {

@@ -1,4 +1,5 @@
 import { get, set } from "./lib/idb-keyval.js";
+import { initHaptic, triggerHaptic } from "./haptic.js";
 
 window.addEventListener("load", function () {
   const canvas = document.getElementById("scope");
@@ -99,6 +100,18 @@ window.addEventListener("load", function () {
       // High Freq Jitter
       val += (Math.random() - 0.5) * 1.5;
       noiseSignal[i] = val;
+    }
+
+    // Normalize to RMS = 2.5 for fair starting conditions
+    let sumSq = 0;
+    for (let i = 0; i < POINTS; i++) {
+      sumSq += noiseSignal[i] * noiseSignal[i];
+    }
+    let currentRMS = Math.sqrt(sumSq / POINTS);
+    let scaleFactor = 2.5 / currentRMS;
+
+    for (let i = 0; i < POINTS; i++) {
+      noiseSignal[i] *= scaleFactor;
     }
   }
 
@@ -447,6 +460,8 @@ window.addEventListener("load", function () {
   function invertWavelet() {
     if (invertCount <= 0 || !gameRunning || isDropping) return;
 
+    triggerHaptic();
+
     for (let i = 0; i < packet.vals.length; i++) {
       packet.vals[i] *= -1;
     }
@@ -698,6 +713,7 @@ window.addEventListener("load", function () {
     // Normal game input - only from canvas, and only tap (not drag) to drop
     if (fromCanvas && !isDragging && !isDropping && gameRunning) {
       isDropping = true;
+      triggerHaptic();
     }
     isDragging = false;
     isMouseDown = false;
@@ -718,9 +734,18 @@ window.addEventListener("load", function () {
     }
   }
 
+  // Radio button haptic feedback
+  const radioButtons = document.querySelectorAll('input[name="game-mode"]');
+  radioButtons.forEach((radio) => {
+    radio.addEventListener("change", () => {
+      triggerHaptic();
+    });
+  });
+
   // Start button handler
   const startBtn = document.getElementById("start-btn");
   startBtn.addEventListener("click", () => {
+    triggerHaptic();
     const modeRadio = document.querySelector('input[name="game-mode"]:checked');
     gameMode = modeRadio.value;
     document.getElementById("splash-screen").style.display = "none";
@@ -731,11 +756,13 @@ window.addEventListener("load", function () {
   // Game menu handlers
   const restartBtn = document.getElementById("restart-btn");
   restartBtn.addEventListener("click", () => {
+    triggerHaptic();
     resetGame();
   });
 
   const changeModeBtn = document.getElementById("change-mode-btn");
   changeModeBtn.addEventListener("click", () => {
+    triggerHaptic();
     hideGameMenu();
     updateSplashHighScores();
     document.getElementById("splash-screen").style.display = "block";
@@ -743,6 +770,7 @@ window.addEventListener("load", function () {
 
   const resumeBtn = document.getElementById("resume-btn");
   resumeBtn.addEventListener("click", () => {
+    triggerHaptic();
     if (gameRunning) {
       hideGameMenu();
     }
@@ -754,6 +782,7 @@ window.addEventListener("load", function () {
 
   rmsDisplay.addEventListener("click", (e) => {
     e.stopPropagation();
+    triggerHaptic();
     if (gameRunning) {
       showGameMenu("PAUSED", "#ffcc00");
     }
@@ -761,6 +790,7 @@ window.addEventListener("load", function () {
 
   statusDisplay.addEventListener("click", (e) => {
     e.stopPropagation();
+    triggerHaptic();
     if (gameRunning) {
       showGameMenu("PAUSED", "#ffcc00");
     }
@@ -830,6 +860,7 @@ window.addEventListener("load", function () {
 
   // Boot
   async function init() {
+    initHaptic();
     await loadHighScores();
     updateSplashHighScores();
 
