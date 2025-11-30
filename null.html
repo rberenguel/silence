@@ -4,20 +4,73 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link rel="stylesheet" href="fonts/iconoir/iconoir.css">
+<link rel="stylesheet" href="fonts/sixtyfour.css">
+<link rel="stylesheet" href="fonts/monoid.css">
 <style>
-  body { background-color: #000000; color: #33ff00; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; touch-action: none; height: 100vh; }
+  body { background-color: #000000; color: #33ff00; font-family: 'monoidregular', monospace; margin: 0; overflow: hidden; touch-action: none; height: 100vh; }
   canvas { display: block; width: 100%; height: 100%; }
   #game-ui { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; pointer-events: none; z-index: 30; }
   .hud-text { background: rgba(0, 20, 0, 0.8); padding: 8px 15px; border: 1px solid #33ff00; font-size: 20px; text-shadow: 0 0 5px #33ff00; }
   .rms-indicator { margin-left: 8px; display: inline-block; vertical-align: middle; }
   #controls-hint { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #00aa00; font-size: 12px; pointer-events: none; z-index: 30; }
+
+  #splash-screen {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 20, 0, 0.95);
+    border: 2px solid #33ff00;
+    padding: 40px 60px;
+    text-align: center;
+    z-index: 100;
+    box-shadow: 0 0 30px #33ff00;
+  }
+  #splash-screen h1 {
+    font-family: 'Sixtyfour', monospace;
+    font-size: 72px;
+    color: #33ff00;
+    margin: 0 0 30px 0;
+    text-shadow: 0 0 10px #33ff00;
+  }
+  #splash-screen p {
+    font-size: 18px;
+    line-height: 1.8;
+    margin: 12px 0;
+    color: #88ff88;
+  }
+  #splash-screen .tap-hint {
+    margin-top: 40px;
+    font-size: 16px;
+    color: #00aa00;
+    animation: pulse 2s infinite;
+  }
+  @media (max-width: 768px) {
+    #splash-screen h1 { font-size: 48px; margin: 0 0 20px 0; }
+    #splash-screen p { font-size: 14px; line-height: 1.6; margin: 10px 0; }
+    #splash-screen .tap-hint { margin-top: 30px; font-size: 12px; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
 </style>
 </head>
 <body>
 
+<div id="splash-screen">
+  <h1>SILENCE</h1>
+  <p>Cancel the noise signal using destructive interference</p>
+  <p><strong>DRAG:</strong> Position wavelet horizontally</p>
+  <p><strong>TAP TOP:</strong> Drop wavelet to merge</p>
+  <p><strong>TAP BOTTOM:</strong> Flip wavelet polarity</p>
+  <p>Keep RMS below 5.0 to survive</p>
+  <div class="tap-hint">TAP TO START</div>
+</div>
+
 <div id="game-ui">
   <div class="hud-text">RMS: <span id="noise-lvl">0.00</span><i id="rms-trend" class="rms-indicator"></i></div>
-  <div class="hud-text">COMPLEXITY: <span id="complexity-disp">1</span></div>
+  <div class="hud-text" id="status-display">COMPLEXITY: <span id="complexity-disp">1</span></div>
 </div>
 <canvas id="scope"></canvas>
 <div id="controls-hint">DRAG: Align Phase | TAP TOP: Drop | TAP BOTTOM: Flip</div>
@@ -36,7 +89,8 @@ window.addEventListener('load', function() {
     let particles = [];
     let packet = { vals: [], xIndex: 0, yOffset: -150 };
     let isDropping = false;
-    let gameRunning = true;
+    let gameRunning = false; // Start with game paused for splash
+    let gameStarted = false;
 
     // Progression
     let score = 0;
@@ -161,8 +215,13 @@ window.addEventListener('load', function() {
             }
         }
 
-        // Dynamic Clipping Threshold
-        if (maxVal > 25) { 
+        // Win condition
+        if (rms < 0.1) {
+            gameWin();
+        }
+
+        // Game over conditions
+        if (maxVal > 25 || rms > 5) {
             gameOver();
         }
 
@@ -256,17 +315,43 @@ window.addEventListener('load', function() {
         spawnPacket();
     }
 
+    function gameWin() {
+        gameRunning = false;
+        const statusEl = document.getElementById('status-display');
+        statusEl.innerText = "SILENCE ACHIEVED! TAP TO RESTART";
+        statusEl.style.borderColor = "#00ff00";
+        statusEl.style.color = "#00ff00";
+    }
+
     function gameOver() {
         gameRunning = false;
+        const statusEl = document.getElementById('status-display');
+        statusEl.innerText = "OVERLOAD - TAP TO RESTART";
+        statusEl.style.borderColor = "red";
+        statusEl.style.color = "red";
     }
 
     function resetGame() {
         generateNoise();
         complexity = 1;
-        document.getElementById('complexity-disp').innerText = complexity;
         score = 0;
+        waveletQueue = [];
+        // Pre-fill queue with 3 wavelets
+        for (let i = 0; i < 3; i++) {
+            waveletQueue.push(createProceduralPacket(complexity));
+        }
         spawnPacket();
         gameRunning = true;
+
+        const statusEl = document.getElementById('status-display');
+        statusEl.innerText = "COMPLEXITY: ";
+        statusEl.style.borderColor = "#33ff00";
+        statusEl.style.color = "#33ff00";
+
+        const complexitySpan = document.createElement('span');
+        complexitySpan.id = 'complexity-disp';
+        complexitySpan.innerText = complexity;
+        statusEl.appendChild(complexitySpan);
     }
 
     function spawnParticle(x, y, color) {
@@ -421,9 +506,25 @@ window.addEventListener('load', function() {
     }
 
     function inputEnd() {
-        if (!gameRunning) { resetGame(); return; }
+        // Handle splash screen
+        if (!gameStarted) {
+            document.getElementById('splash-screen').style.display = 'none';
+            gameStarted = true;
+            gameRunning = true;
+            isDragging = false;
+            isMouseDown = false;
+            return;
+        }
 
-        // If we didn't drag (Tap), determine action based on Y position
+        // Handle game over restart
+        if (!gameRunning) {
+            resetGame();
+            isDragging = false;
+            isMouseDown = false;
+            return;
+        }
+
+        // Normal game input - only if we didn't drag
         if (!isDragging) {
             if (startY > HEIGHT / 2) {
                 // Lower half: Flip the wavelet
