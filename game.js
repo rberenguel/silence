@@ -694,12 +694,15 @@ window.addEventListener("load", function () {
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     // Zero Line
+    ctx.save();
+    ctx.shadowBlur = 0;
     ctx.strokeStyle = "#002200";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, CENTER_Y);
     ctx.lineTo(WIDTH, CENTER_Y);
     ctx.stroke();
+    ctx.restore();
 
     drawLine(noiseSignal, 0, "#33ff00", 2, true);
     if (gameRunning) {

@@ -4,8 +4,13 @@ body {
   font-family: "monoidregular", monospace;
   margin: 0;
   overflow: hidden;
-  touch-action: none;
+  touch-action: manipulation;
   height: 100vh;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 canvas {
