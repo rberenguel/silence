@@ -17,6 +17,15 @@ window.addEventListener("load", function () {
   let gameRunning = false; // Start with game paused for splash
   let gameStarted = false;
 
+  // Animation state for signal merging
+  let mergeAnimation = {
+    active: false,
+    frame: 0,
+    totalFrames: 12,
+    oldSignal: [],
+    newSignal: [],
+  };
+
   // Progression
   let score = 0;
   let complexity = 1; // Starts simple (1-2 bumps), scales up
@@ -177,6 +186,28 @@ window.addEventListener("load", function () {
   function update() {
     if (!gameRunning) return;
 
+    // Update merge animation
+    if (mergeAnimation.active) {
+      mergeAnimation.frame++;
+      const progress = mergeAnimation.frame / mergeAnimation.totalFrames;
+
+      // Interpolate between old and new signal
+      for (let i = 0; i < POINTS; i++) {
+        noiseSignal[i] =
+          mergeAnimation.oldSignal[i] +
+          (mergeAnimation.newSignal[i] - mergeAnimation.oldSignal[i]) *
+            progress;
+      }
+
+      if (mergeAnimation.frame >= mergeAnimation.totalFrames) {
+        // Animation complete, snap to final values
+        for (let i = 0; i < POINTS; i++) {
+          noiseSignal[i] = mergeAnimation.newSignal[i];
+        }
+        mergeAnimation.active = false;
+      }
+    }
+
     // RMS & Clipping
     let sumSq = 0;
     let maxVal = 0;
@@ -252,37 +283,46 @@ window.addEventListener("load", function () {
     }
     let rmsBefore = Math.sqrt(sumSqBefore / POINTS);
 
+    // Store old signal for animation
+    mergeAnimation.oldSignal = [...noiseSignal];
+    mergeAnimation.newSignal = [...noiseSignal];
+
     for (let i = 0; i < packet.vals.length; i++) {
       const idx = packet.xIndex + i;
       if (idx >= 0 && idx < POINTS) {
         const oldVal = noiseSignal[idx];
-        noiseSignal[idx] += packet.vals[i];
+        mergeAnimation.newSignal[idx] += packet.vals[i];
 
         // Visual feedback: Calculate how much we reduced/increased the signal
-        const delta = Math.abs(oldVal) - Math.abs(noiseSignal[idx]);
+        const delta =
+          Math.abs(oldVal) - Math.abs(mergeAnimation.newSignal[idx]);
 
         // If delta is positive, we reduced noise (Good).
         // If negative, we added noise (Bad).
         if (delta > 0.5) {
           spawnParticle(
             idx * SEGMENT_WIDTH,
-            CENTER_Y - noiseSignal[idx] * SCALE_Y,
+            CENTER_Y - mergeAnimation.newSignal[idx] * SCALE_Y,
             "#00ff00",
           ); // Green spark
         } else if (delta < -2) {
           spawnParticle(
             idx * SEGMENT_WIDTH,
-            CENTER_Y - noiseSignal[idx] * SCALE_Y,
+            CENTER_Y - mergeAnimation.newSignal[idx] * SCALE_Y,
             "#ff0000",
           ); // Red spark
         }
       }
     }
 
+    // Start animation
+    mergeAnimation.active = true;
+    mergeAnimation.frame = 0;
+
     // Calculate RMS after merge and set trend
     let sumSqAfter = 0;
     for (let i = 0; i < POINTS; i++) {
-      let v = noiseSignal[i] || 0;
+      let v = mergeAnimation.newSignal[i] || 0;
       sumSqAfter += v * v;
     }
     let rmsAfter = Math.sqrt(sumSqAfter / POINTS);
@@ -473,14 +513,30 @@ window.addEventListener("load", function () {
   }
 
   function spawnParticle(x, y, color) {
+    // Main particle
     particles.push({
       x: x,
       y: y,
       vx: (Math.random() - 0.5) * 10,
       vy: (Math.random() - 0.5) * 10,
       life: 1.0,
+      size: 3,
       c: color,
     });
+
+    // Add many smaller particles around it
+    const smallParticleCount = 8 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < smallParticleCount; i++) {
+      particles.push({
+        x: x + (Math.random() - 0.5) * 10,
+        y: y + (Math.random() - 0.5) * 10,
+        vx: (Math.random() - 0.5) * 15,
+        vy: (Math.random() - 0.5) * 15,
+        life: 0.8 + Math.random() * 0.4,
+        size: 0.5 + Math.random() * 1,
+        c: color,
+      });
+    }
   }
 
   // --- RENDER ---
@@ -655,7 +711,7 @@ window.addEventListener("load", function () {
       ctx.fillStyle = p.c;
       ctx.globalAlpha = p.life;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, p.size || 3, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.globalAlpha = 1.0;
