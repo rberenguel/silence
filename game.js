@@ -162,10 +162,17 @@ window.addEventListener("load", function () {
     const hfMetric = getHighFrequencyMetric();
     const isHighFrequency = hfMetric > 0.3; // Threshold for "jumpy" signal
 
-    // If high-frequency, bias toward simpler, narrower pieces
+    // Detect low RMS - need simpler, more targeted pieces
+    const currentRMS = getSignalAmplitude();
+    const isLowRMS = currentRMS < 0.5;
+
+    // If high-frequency or low RMS, bias toward simpler, narrower pieces
     let lvl;
     if (isHighFrequency && Math.random() < 0.6) {
       // 60% chance of generating a simple narrow bump
+      lvl = 1;
+    } else if (isLowRMS && Math.random() < 0.7) {
+      // 70% chance of simple pieces at low RMS
       lvl = 1;
     } else {
       // Normal variety: choose from 1 to maxLvl
@@ -180,6 +187,10 @@ window.addEventListener("load", function () {
     const phase = Math.random() * Math.PI * 2;
     const harmonics = 1 + Math.floor(lvl / 3); // Add extra sine waves at higher levels
 
+    // At low RMS, make pieces cleaner (more delta-like, single frequency)
+    const noiseAmount = isLowRMS ? 0.05 : 0.15;
+    const highFreqAmount = isLowRMS ? 0.03 : 0.1;
+
     for (let i = 0; i < width; i++) {
       // Window Function (Hanning) to ensure ends taper to 0 smoothly
       // This creates a "Packet" rather than a hard cut signal
@@ -187,18 +198,19 @@ window.addEventListener("load", function () {
 
       let val = Math.sin(i * freq + phase);
 
-      // Add jaggedness/harmonics
-      if (harmonics > 1) {
+      // Add jaggedness/harmonics (skip at low RMS for cleaner pieces)
+      if (harmonics > 1 && !isLowRMS) {
         val += Math.sin(i * freq * 2.5) * 0.5;
       }
 
-      // Reduce high-frequency noise components for better cancellation
-      val += (Math.random() - 0.5) * 0.15; // Reduced from 0.25
-      val += Math.sin(i * 1.8 + phase) * 0.1; // Reduced from 0.2
+      // Add high-frequency components (reduced at low RMS for delta-like pieces)
+      val += (Math.random() - 0.5) * noiseAmount;
+      val += Math.sin(i * 1.8 + phase) * highFreqAmount;
 
       // Scale amplitude to match current signal
-      // Base amplitude scaled by signal RMS
-      const targetAmp = getSignalAmplitude() * 0.8; // 80% of signal amplitude
+      // Use signal RMS but with a minimum floor to keep pieces usable
+      const signalRMS = getSignalAmplitude();
+      const targetAmp = Math.max(1.5, signalRMS * 1.2); // At least 1.5, or 120% of signal
       val *= targetAmp;
 
       // Apply window
