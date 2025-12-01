@@ -134,14 +134,42 @@ window.addEventListener("load", function () {
     }
   }
 
+  // Detect high-frequency content by measuring average absolute differences
+  function getHighFrequencyMetric() {
+    let sumDiff = 0;
+    for (let i = 1; i < POINTS; i++) {
+      sumDiff += Math.abs(noiseSignal[i] - noiseSignal[i - 1]);
+    }
+    return sumDiff / POINTS;
+  }
+
+  // Get current signal amplitude (RMS-based)
+  function getSignalAmplitude() {
+    let sumSq = 0;
+    for (let i = 0; i < POINTS; i++) {
+      sumSq += noiseSignal[i] * noiseSignal[i];
+    }
+    return Math.sqrt(sumSq / POINTS);
+  }
+
   function createProceduralPacket(maxLvl) {
     // "The more there are the harder it is"
     // Lvl 1: Width ~10, 1-2 peaks.
     // Lvl 5: Width ~30, multiple peaks/valleys.
 
-    // Randomly choose a complexity from 1 to maxLvl
-    // This gives players variety and simpler pieces even at high complexity
-    const lvl = 1 + Math.floor(Math.random() * maxLvl);
+    // Detect if signal has high-frequency content
+    const hfMetric = getHighFrequencyMetric();
+    const isHighFrequency = hfMetric > 0.3; // Threshold for "jumpy" signal
+
+    // If high-frequency, bias toward simpler, narrower pieces
+    let lvl;
+    if (isHighFrequency && Math.random() < 0.6) {
+      // 60% chance of generating a simple narrow bump
+      lvl = 1;
+    } else {
+      // Normal variety: choose from 1 to maxLvl
+      lvl = 1 + Math.floor(Math.random() * maxLvl);
+    }
 
     const width = Math.min(60, 12 + lvl * 4);
     const arr = [];
@@ -163,13 +191,14 @@ window.addEventListener("load", function () {
         val += Math.sin(i * freq * 2.5) * 0.5;
       }
 
-      // Add high-frequency components to reduce Gibbs ringing
-      val += (Math.random() - 0.5) * 0.25; // Random texture
-      val += Math.sin(i * 1.8 + phase) * 0.2; // Deterministic high-freq
+      // Reduce high-frequency noise components for better cancellation
+      val += (Math.random() - 0.5) * 0.15; // Reduced from 0.25
+      val += Math.sin(i * 1.8 + phase) * 0.1; // Reduced from 0.2
 
-      // Scale amplitude (sometimes positive, sometimes negative average)
-      // We want it to be distinct.
-      val *= 3 + Math.random() * 2;
+      // Scale amplitude to match current signal
+      // Base amplitude scaled by signal RMS
+      const targetAmp = getSignalAmplitude() * 0.8; // 80% of signal amplitude
+      val *= targetAmp;
 
       // Apply window
       arr.push(val * window);
