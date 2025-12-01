@@ -8,6 +8,7 @@ window.addEventListener("load", function () {
   // --- CONFIG ---
   const POINTS = 100; // High resolution for complex waves
   let WIDTH, HEIGHT, SEGMENT_WIDTH, CENTER_Y, SCALE_Y;
+  let zoomLevel = 1.0; // Zoom multiplier for signal amplitude
 
   // --- STATE ---
   let noiseSignal = new Array(POINTS).fill(0);
@@ -665,7 +666,7 @@ window.addEventListener("load", function () {
         const t = s / steps;
         const x = (i + t) * SEGMENT_WIDTH;
         const interpolatedY = catmullRom(p0, p1, p2, p3, t);
-        const y = CENTER_Y + offsetY - interpolatedY * SCALE_Y;
+        const y = CENTER_Y + offsetY - interpolatedY * SCALE_Y * zoomLevel;
 
         if (i === 0 && s === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
@@ -696,7 +697,8 @@ window.addEventListener("load", function () {
         const t = s / steps;
         const x = (packet.xIndex + i + t) * SEGMENT_WIDTH;
         const interpolatedY = catmullRom(p0, p1, p2, p3, t);
-        const y = CENTER_Y + packet.yOffset - interpolatedY * SCALE_Y;
+        const y =
+          CENTER_Y + packet.yOffset - interpolatedY * SCALE_Y * zoomLevel;
 
         if (i === 0 && s === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
@@ -725,7 +727,7 @@ window.addEventListener("load", function () {
         const t = s / steps;
         const x = (packet.xIndex + i + t) * SEGMENT_WIDTH;
         const interpolatedY = catmullRom(p0, p1, p2, p3, t);
-        const y = CENTER_Y - interpolatedY * SCALE_Y;
+        const y = CENTER_Y - interpolatedY * SCALE_Y * zoomLevel;
 
         if (i === 0 && s === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
@@ -784,15 +786,47 @@ window.addEventListener("load", function () {
     ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-    // Zero Line
+    // Amplitude scale markers (oscilloscope-style)
     ctx.save();
-    ctx.shadowBlur = 0;
-    ctx.strokeStyle = "#002200";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "#cc6600";
+    ctx.lineWidth = 2;
+    ctx.shadowBlur = 3;
+    ctx.shadowColor = "#cc6600";
+    ctx.globalAlpha = 0.4;
+
+    // Center vertical line
+    ctx.beginPath();
+    ctx.moveTo(WIDTH / 2, 0);
+    ctx.lineTo(WIDTH / 2, HEIGHT);
+    ctx.stroke();
+
+    // Amplitude markers on center line
+    const markerSpacing = 20 * zoomLevel; // Spacing grows with zoom
+    for (
+      let offset = markerSpacing;
+      offset < HEIGHT / 2;
+      offset += markerSpacing
+    ) {
+      // Markers above center
+      ctx.beginPath();
+      ctx.moveTo(WIDTH / 2 - 10, CENTER_Y - offset);
+      ctx.lineTo(WIDTH / 2 + 10, CENTER_Y - offset);
+      ctx.stroke();
+
+      // Markers below center
+      ctx.beginPath();
+      ctx.moveTo(WIDTH / 2 - 10, CENTER_Y + offset);
+      ctx.lineTo(WIDTH / 2 + 10, CENTER_Y + offset);
+      ctx.stroke();
+    }
+
+    // Zero Line (horizontal)
     ctx.beginPath();
     ctx.moveTo(0, CENTER_Y);
     ctx.lineTo(WIDTH, CENTER_Y);
     ctx.stroke();
+
+    ctx.shadowBlur = 0;
     ctx.restore();
 
     drawLine(noiseSignal, 0, "#33ff00", 2, true);
@@ -872,11 +906,48 @@ window.addEventListener("load", function () {
     triggerHaptic();
   }
 
+  // Zoom controls
+  function adjustZoom(delta) {
+    zoomLevel = Math.max(0.5, Math.min(5.0, zoomLevel + delta));
+  }
+
+  // Mouse wheel zoom
+  canvas.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      adjustZoom(delta);
+    },
+    { passive: false },
+  );
+
+  // Touch pinch zoom tracking
+  let lastTouchDistance = 0;
+  let isPinching = false;
+
   // Keyboard event handlers
   document.addEventListener("keydown", (e) => {
-    if (!gameRunning) return;
+    if (
+      !gameRunning &&
+      e.key !== "+" &&
+      e.key !== "=" &&
+      e.key !== "-" &&
+      e.key !== "_"
+    )
+      return;
 
     switch (e.key) {
+      case "+":
+      case "=":
+        e.preventDefault();
+        adjustZoom(0.1);
+        break;
+      case "-":
+      case "_":
+        e.preventDefault();
+        adjustZoom(-0.1);
+        break;
       case "ArrowLeft":
         e.preventDefault();
         moveWavelet(-1);
@@ -1026,8 +1097,17 @@ window.addEventListener("load", function () {
   canvas.addEventListener(
     "touchstart",
     (e) => {
-      if (!isClickOnHUD(e.touches[0].clientX, e.touches[0].clientY)) {
-        inputStart(e.touches[0].clientX, e.touches[0].clientY);
+      // Handle pinch zoom with 2 fingers
+      if (e.touches.length === 2) {
+        isPinching = true;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        lastTouchDistance = Math.sqrt(dx * dx + dy * dy);
+      } else if (e.touches.length === 1 && !isPinching) {
+        // Normal single-finger input (only if not in pinch mode)
+        if (!isClickOnHUD(e.touches[0].clientX, e.touches[0].clientY)) {
+          inputStart(e.touches[0].clientX, e.touches[0].clientY);
+        }
       }
     },
     { passive: false },
@@ -1043,7 +1123,24 @@ window.addEventListener("load", function () {
     "touchmove",
     (e) => {
       e.preventDefault();
-      inputMove(e.touches[0].clientX);
+
+      // Handle pinch zoom with 2 fingers
+      if (e.touches.length === 2) {
+        isPinching = true;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (lastTouchDistance > 0) {
+          const delta = (distance - lastTouchDistance) * 0.01;
+          adjustZoom(delta);
+        }
+
+        lastTouchDistance = distance;
+      } else if (e.touches.length === 1 && !isPinching) {
+        // Normal single-finger drag (only if not in pinch mode)
+        inputMove(e.touches[0].clientX);
+      }
     },
     { passive: false },
   );
@@ -1056,9 +1153,22 @@ window.addEventListener("load", function () {
   });
   canvas.addEventListener("touchend", (e) => {
     e.preventDefault();
-    const touch = e.changedTouches[0];
-    if (!isClickOnHUD(touch.clientX, touch.clientY)) {
-      inputEnd(true);
+
+    // Reset pinch zoom tracking when fingers lift
+    if (e.touches.length < 2) {
+      lastTouchDistance = 0;
+    }
+
+    // Handle normal touch end only if not in pinch mode
+    if (e.touches.length === 0 && e.changedTouches.length > 0) {
+      if (!isPinching) {
+        const touch = e.changedTouches[0];
+        if (!isClickOnHUD(touch.clientX, touch.clientY)) {
+          inputEnd(true);
+        }
+      }
+      // Reset pinch flag when all fingers are lifted
+      isPinching = false;
     }
   });
 
